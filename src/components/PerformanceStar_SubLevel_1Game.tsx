@@ -8,7 +8,7 @@ const PerformanceStar_SubLevel_1Game = ({
 }) => {
   const [animate, setAnimate] = useState(false);
   // const [showTips, setShowTips] = useState(false);
-  const [showStats, setShowStats] = useState(false);
+  // const [showStats, setShowStats] = useState(false);
   
   useEffect(() => {
     setAnimate(true);
@@ -116,16 +116,16 @@ const PerformanceStar_SubLevel_1Game = ({
   };
 
   // NEW: Performance stats to show player
-  const getPerformanceStats = () => {
-    return {
-      accuracy: `${Math.round((score / 20) * 100)}%`,
-      remaining: 20 - score,
-      level: getPerformanceInsights().level,
-      nextMilestone: score < 10 ? "10 points to unlock continuation" : 
-                    score < 15 ? "15 points for Advanced level" :
-                    score < 20 ? "20 points for Perfect score" : "Maximum score achieved!"
-    };
-  };
+  // const getPerformanceStats = () => {
+  //   return {
+  //     accuracy: `${Math.round((score / 20) * 100)}%`,
+  //     remaining: 20 - score,
+  //     level: getPerformanceInsights().level,
+  //     nextMilestone: score < 10 ? "10 points to unlock continuation" : 
+  //                   score < 15 ? "15 points for Advanced level" :
+  //                   score < 20 ? "20 points for Perfect score" : "Maximum score achieved!"
+  //   };
+  // };
 
  
 
