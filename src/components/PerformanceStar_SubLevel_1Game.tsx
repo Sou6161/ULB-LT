@@ -1,19 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
-interface PerformanceStar_SubLevel_1GameProps {
-  score: number;
-  onRetry: () => void;
-  onContinue: () => void;
-  isDarkMode: boolean;
-}
-
-const PerformanceStar_SubLevel_1Game: React.FC<PerformanceStar_SubLevel_1GameProps> = ({ 
-  score, 
-  onRetry, 
-  onContinue, 
-  isDarkMode 
+const PerformanceStar_SubLevel_1Game = ({ 
+  score = 5, 
+  onRetry = () => console.log("Retry clicked"), 
+  onContinue = () => console.log("Continue clicked"), 
+  isDarkMode = true 
 }) => {
   const [animate, setAnimate] = useState(false);
+  // const [showTips, setShowTips] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   
   useEffect(() => {
     setAnimate(true);
@@ -111,6 +106,29 @@ const PerformanceStar_SubLevel_1Game: React.FC<PerformanceStar_SubLevel_1GamePro
     return '🚀';
   };
 
+  // NEW: Performance insights based on score
+  const getPerformanceInsights = () => {
+    if (score === 20) return { level: "Expert", message: "Mastery achieved! You've demonstrated perfect understanding." };
+    if (score >= 15) return { level: "Advanced", message: "Great progress! You're approaching mastery level." };
+    if (score >= 10) return { level: "Intermediate", message: "Good understanding of core concepts. Keep building!" };
+    if (score >= 5) return { level: "Beginner", message: "You're getting started. Focus on the fundamentals." };
+    return { level: "Novice", message: "Everyone starts somewhere. Keep practicing!" };
+  };
+
+  // NEW: Performance stats to show player
+  const getPerformanceStats = () => {
+    return {
+      accuracy: `${Math.round((score / 20) * 100)}%`,
+      remaining: 20 - score,
+      level: getPerformanceInsights().level,
+      nextMilestone: score < 10 ? "10 points to unlock continuation" : 
+                    score < 15 ? "15 points for Advanced level" :
+                    score < 20 ? "20 points for Perfect score" : "Maximum score achieved!"
+    };
+  };
+
+ 
+
   return (
     <div className="relative">
       {/* Backdrop blur effect */}
@@ -130,7 +148,7 @@ const PerformanceStar_SubLevel_1Game: React.FC<PerformanceStar_SubLevel_1GamePro
         </div>
 
         {/* Top emoji badge */}
-        <div className="absolute -top-4 right-4">
+        <div className="absolute -top-0 right-4">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transform ${animate ? 'scale-125' : 'scale-100'} transition-all duration-300 ${
             isDarkMode ? 'bg-gray-800 shadow-lg' : 'bg-white shadow-md'
           }`}>
@@ -138,8 +156,10 @@ const PerformanceStar_SubLevel_1Game: React.FC<PerformanceStar_SubLevel_1GamePro
           </div>
         </div>
 
+        
+
         {/* Progress Bar */}
-        <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden mb-6 shadow-inner">
+        <div className="w-full h-6 mt-4 bg-gray-200 rounded-full overflow-hidden mb-8 shadow-inner">
           <div 
             className={`h-6 transition-all duration-1000 ease-out ${getProgressColor()}`} 
             style={{ width: `${getProgressPercentage()}%` }}
@@ -179,8 +199,42 @@ const PerformanceStar_SubLevel_1Game: React.FC<PerformanceStar_SubLevel_1GamePro
           </span>
         </h3>
 
+        {/* NEW: Performance Insight Message */}
+        <p className={`text-sm text-center mb-4 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+          {getPerformanceInsights().message}
+        </p>
+
+        
+
         {/* Motivational Message (shown if fewer than 4 stars) */}
         {getMotivationalMessage()}
+
+        {/* NEW: Level-specific Tips */}
+        {/* <div className="mb-4">
+          <div className="flex justify-between items-center mb-1">
+            <h4 className={`text-xs font-medium ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+              PERFORMANCE TIPS
+            </h4>
+            <button 
+              onClick={() => setShowTips(!showTips)} 
+              className={`text-xs ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}
+            >
+              {showTips ? "Hide" : "Show"}
+            </button>
+          </div>
+          
+          {showTips && (
+            <div className={`p-3 rounded-lg mb-4 ${
+              isDarkMode ? "bg-gray-800/50" : "bg-gray-100"
+            }`}>
+              <ul className={`text-sm list-disc pl-5 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                {getLevelSpecificTips().map((tip, index) => (
+                  <li key={index} className="mb-1">{tip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div> */}
 
         {/* Bonus Tip (shown only with 4 stars) */}
         {getBonusTip() && (
@@ -192,6 +246,36 @@ const PerformanceStar_SubLevel_1Game: React.FC<PerformanceStar_SubLevel_1GamePro
             >
               💡 <span className="underline decoration-dotted underline-offset-2">Pro Tip:</span> {getBonusTip()}
             </p>
+          </div>
+        )}
+
+        {/* NEW: Streak Badge (if player has been consistent) */}
+        {/* <div className={`flex items-center justify-center mb-6 ${score < 10 ? "" : "hidden"}`}>
+          <div className={`px-3 py-1 rounded-full text-xs flex items-center gap-1 ${
+            isDarkMode ? "bg-amber-900/30 text-amber-200" : "bg-amber-50 text-amber-800"
+          }`}>
+            <span className="text-amber-500">🔥</span> 3 Day Streak! Keep it up!
+          </div>
+        </div> */}
+
+        {/* NEW: Next milestone indicator */}
+        {score < 10 && (
+          <div className="mb-6">
+            <div className="flex justify-between text-xs mb-1">
+              <span className={isDarkMode ? "text-gray-400" : "text-gray-600"}>Current</span>
+              <span className={isDarkMode ? "text-gray-400" : "text-gray-600"}>Next Milestone</span>
+            </div>
+            <div className="w-full h-2 bg-gray-700 rounded-full mb-1">
+              <div 
+                className="h-2 bg-gradient-to-r from-red-500 to-amber-500 rounded-full" 
+                style={{ width: `${(score / 10) * 100}%` }}
+              ></div>
+            </div>
+            <div className="text-xs text-center">
+              <span className={isDarkMode ? "text-amber-400" : "text-amber-600"}>
+                {10 - score} more points to unlock "Continue"
+              </span>
+            </div>
           </div>
         )}
 
@@ -236,7 +320,5 @@ const PerformanceStar_SubLevel_1Game: React.FC<PerformanceStar_SubLevel_1GamePro
     </div>
   );
 };
-
-
 
 export default PerformanceStar_SubLevel_1Game;

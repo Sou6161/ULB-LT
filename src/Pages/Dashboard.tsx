@@ -254,20 +254,20 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
                   </button>
                   <button 
                   className={`w-full p-2 mb-2 rounded-lg ${
-                    levelTwoScore < 60   // change this to actual level 2 score for passing
+                    levelTwoScore < 100   // change this to actual level 2 score for passing
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-lime-600 text-white hover:bg-lime-700"
                   }`}
-                  onClick={() => levelTwoScore >= 60 && handlePartSelect(2)}>
+                  onClick={() => levelTwoScore >= 100 && handlePartSelect(2)}>
                     Part 2: Automating Small Conditions
                   </button>
                   <button 
                   className={`w-full p-2 mb-2 rounded-lg ${
-                    levelTwoScore < 0
+                    levelTwoScore < 120
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-lime-600 text-white hover:bg-lime-700"
                   }`}
-                  onClick={() => levelTwoScore >= 0 && handlePartSelect(3)}>
+                  onClick={() => levelTwoScore >= 120 && handlePartSelect(3)}>
                     Part 3: Automating big Conditions
                   </button>
                 </div>
