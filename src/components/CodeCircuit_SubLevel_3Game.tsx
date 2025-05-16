@@ -106,7 +106,7 @@ const CodeCircuit_SubLevel_3Game: React.FC<CodeCircuitProps> = ({
           >
             <span className={`text-2xl ${userCorrect === 2 ? 'animate-pulse' : ''}`}>⚡</span>
             <span className="relative">
-              Sub-Level 3: Code Circuit
+              Sub-Level 3: Big Conditions
               {userCorrect === 2 && (
                 <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-teal-400 to-transparent"></span>
               )}
