@@ -46,7 +46,6 @@ interface CertificationPopupProps {
 }
 
 const CertificationPopup: React.FC<CertificationPopupProps> = ({
-  message,
   isVisible,
   isDarkMode,
   onContinue,
