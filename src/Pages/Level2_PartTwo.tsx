@@ -26,18 +26,12 @@ const LevelTwoPart_Two = () => {
   const { selectedTypes } = useQuestionType();
   const documentRef = useRef<HTMLDivElement>(null);
 
-  // Scoring system
-  const { totalScore, updateScore, levelTwoScore, setLevelTwoScore } = useScore();
-  const [score, setScore] = useState<number>(levelTwoScore);
+  // Scoring system using context
+  const { totalScore, updateScore } = useScore();
   const [scoreChange, setScoreChange] = useState<number | null>(null);
   const [foundPlaceholders, setFoundPlaceholders] = useState<string[]>([]);
   const [foundSmallConditions, setFoundSmallConditions] = useState<string[]>([]);
   const [foundBigConditions, setFoundBigConditions] = useState<string[]>([]);
-
-  useEffect(() => {
-    setLevelTwoScore(score);
-    updateScore(score - totalScore); // Synchronize totalScore with local score changes
-  }, [score, setLevelTwoScore, updateScore, totalScore]);
 
   useEffect(() => {
     console.log("LevelTwoPart_Two - Rendering at:", location.pathname);
@@ -116,44 +110,28 @@ const LevelTwoPart_Two = () => {
       (label === "Small Condition" && hasValidBrackets) ||
       (label === "Big Condition" && hasValidBrackets);
 
-    // Handle scoring
+    // Handle scoring using context
     if (isCorrectButton) {
       if (label === "Edit PlaceHolder" && !foundPlaceholders.includes(textWithoutBrackets)) {
-        setScore((prevScore) => {
-          const newScore = prevScore + 3;
-          updateScore(3); // Update totalScore
-          return newScore;
-        });
+        updateScore(3);
         setScoreChange(3);
         setTimeout(() => setScoreChange(null), 2000);
         setFoundPlaceholders((prev) => [...prev, textWithoutBrackets]);
       } else if (label === "Small Condition" && !foundSmallConditions.includes(textWithoutBrackets)) {
-        setScore((prevScore) => {
-          const newScore = prevScore + 3;
-          updateScore(3); // Update totalScore
-          return newScore;
-        });
+        updateScore(3);
         setScoreChange(3);
         setTimeout(() => setScoreChange(null), 2000);
         setFoundSmallConditions((prev) => [...prev, textWithoutBrackets]);
       } else if (label === "Big Condition" && !foundBigConditions.includes(textWithoutBrackets)) {
-        setScore((prevScore) => {
-          const newScore = prevScore + 3;
-          updateScore(3); // Update totalScore
-          return newScore;
-        });
+        updateScore(3);
         setScoreChange(3);
         setTimeout(() => setScoreChange(null), 2000);
         setFoundBigConditions((prev) => [...prev, textWithoutBrackets]);
       }
     } else {
       // Wrong button clicked - deduct 2 points
-      setScore((prevScore) => {
-        const newScore = Math.max(0, prevScore - 2);
-        updateScore(-2); // Update totalScore
-        return newScore;
-      });
-      if (score > 0) {
+      updateScore(-2);
+      if (totalScore > 0) {
         setScoreChange(-2);
         setTimeout(() => setScoreChange(null), 2000);
       }
@@ -235,8 +213,8 @@ const LevelTwoPart_Two = () => {
       range.deleteContents();
       range.insertNode(fragment);
 
-      const probationClauseContent = "The first [Probation Period Length] of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
-      const pensionClauseContent = "The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.";
+      const probationClauseContent = "The first [Probation Period Length] of employment will be a probationary period. The Company shall assess the Employee's performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
+      const pensionClauseContent = "The Employee will be enrolled in the Company's pension scheme in accordance with auto-enrolment legislation.";
 
       const normalizeText = (text: string) => text.replace(/\s+/g, "");
       const normalizedSelectedText = normalizeText(textWithoutBrackets);

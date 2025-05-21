@@ -10,6 +10,8 @@ import { useUserAnswers } from "../context/UserAnswersContext";
 import parse, { DOMNode, Element } from "html-react-parser";
 import PerformanceStar_SubLevel_1Game from "../components/PerformanceStar_SubLevel_1Game";
 import CodeCircuit_SubLevel_3Game from "../components/CodeCircuit_SubLevel_3Game";
+import { useScore } from "../context/ScoreContext";
+
 
 // Warning Alert Component
 interface WarningAlertProps {
@@ -865,6 +867,7 @@ const Live_Generation = () => {
 
   const selectedPart = localStorage.getItem("selectedPart");
   const levelPath = selectedPart === "4" ? "/Level-Two-Part-Two-Demo" : "/Level-Two-Part-Two";
+  const { totalScore, questionnaireScore } = useScore();
 
   return (
     <div
@@ -880,11 +883,11 @@ const Live_Generation = () => {
         live_generation="/Live_Generation"
       />
       <div
-        className={`fixed top-14 right-2 p-2 rounded-lg shadow-md z-50 ${
+          className={`fixed top-14 right-2 p-2 rounded-lg shadow-md z-50 ${
           isDarkMode ? "bg-gray-700/90 text-teal-300" : "bg-white/90 text-teal-700"
-        }`}
-      >
-        <p className="font-bold">Score: {calculatedScore}</p>
+          }`}
+          >
+          <p className="font-bold">Score: {totalScore}</p>
       </div>
       <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-50 flex gap-4">
         <button

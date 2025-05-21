@@ -203,7 +203,7 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
 
 const Questionnaire = () => {
   const { isDarkMode } = useContext(ThemeContext);
-  const { questionnaireScore, updateQuestionnaireScore } = useScore();
+  const { totalScore, updateScore, updateQuestionnaireScore } = useScore();
   const [leftActive, setLeftActive] = useState(true);
   const [rightActive, setRightActive] = useState(false);
   const { highlightedTexts } = useHighlightedText();
@@ -340,7 +340,6 @@ const Questionnaire = () => {
   }, [uniqueQuestions, selectedTypes, requiredQuestions, enhancedDetermineQuestionType, bonusAwarded, updateQuestionnaireScore]);
 
   useEffect(() => {
-    // Remove duplicates from highlightedTexts at the source
     const uniqueHighlightedTexts = [...new Set(highlightedTexts)];
     console.log("Unique highlighted texts:", uniqueHighlightedTexts);
 
@@ -623,7 +622,7 @@ const Questionnaire = () => {
         }`}
       >
         <div className="relative">
-          Score: {questionnaireScore}
+          Score: {totalScore}
           {scoreFeedback && (
             <div
               key={scoreFeedback.id}
