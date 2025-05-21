@@ -18,21 +18,22 @@ const processAgreement = (html: string, answers: UserAnswers) => {
   console.log("userAnswers in processAgreement:", answers);
 
   // Add font-bold class to h2 tags
-  updatedHtml = updatedHtml.replace(
-    /<h2 className="([^"]*)"/g,
-    (className) => {
-      const classes = className.split(" ");
-      if (!classes.includes("font-bold")) {
-        classes.push("font-bold");
-      }
-      return `<h2 className="${classes.join(" ")}"`;
+  updatedHtml = updatedHtml.replace(/<h2 className="([^"]*)"/g, (className) => {
+    const classes = className.split(" ");
+    if (!classes.includes("font-bold")) {
+      classes.push("font-bold");
     }
-  );
+    return `<h2 className="${classes.join(" ")}"`;
+  });
 
   // Handle [USA] replacement for governing country
   const countryAnswer = answers["What is the governing country?"];
   console.log("countryAnswer for [USA]:", countryAnswer);
-  if (countryAnswer && typeof countryAnswer === "string" && countryAnswer.trim()) {
+  if (
+    countryAnswer &&
+    typeof countryAnswer === "string" &&
+    countryAnswer.trim()
+  ) {
     updatedHtml = updatedHtml.replace(
       new RegExp(`\\[USA\\]`, "gi"),
       countryAnswer
@@ -41,7 +42,8 @@ const processAgreement = (html: string, answers: UserAnswers) => {
   }
 
   // Handle Probationary Period clause
-  const probationAnswer = answers["Is the clause of probationary period applicable?"];
+  const probationAnswer =
+    answers["Is the clause of probationary period applicable?"];
   if (probationAnswer === null || probationAnswer === false) {
     updatedHtml = updatedHtml.replace(
       /<h2[^>]*>[^<]*PROBATIONARY PERIOD[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?<\/p>/i,
@@ -59,14 +61,27 @@ const processAgreement = (html: string, answers: UserAnswers) => {
   }
 
   // Handle Additional Locations clause
-  const additionalLocationsAnswer = answers["Does the employee need to work at additional locations besides the normal place of work?"];
-  const additionalLocationDetails = answers["What is the additional work location?"] as string | undefined;
-  if (additionalLocationsAnswer === true && additionalLocationDetails && typeof additionalLocationDetails === "string" && additionalLocationDetails.trim()) {
+  const additionalLocationsAnswer =
+    answers[
+      "Does the employee need to work at additional locations besides the normal place of work?"
+    ];
+  const additionalLocationDetails = answers[
+    "What is the additional work location?"
+  ] as string | undefined;
+  if (
+    additionalLocationsAnswer === true &&
+    additionalLocationDetails &&
+    typeof additionalLocationDetails === "string" &&
+    additionalLocationDetails.trim()
+  ) {
     updatedHtml = updatedHtml.replace(
       /\[other locations\]/gi,
       additionalLocationDetails
     );
-  } else if (additionalLocationsAnswer === false || additionalLocationsAnswer === null) {
+  } else if (
+    additionalLocationsAnswer === false ||
+    additionalLocationsAnswer === null
+  ) {
     updatedHtml = updatedHtml.replace(
       /<h2[^>]*>[^<]*ADDITIONAL WORK LOCATIONS[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?\[other locations\][\s\S]*?<\/p>/i,
       ""
@@ -74,9 +89,13 @@ const processAgreement = (html: string, answers: UserAnswers) => {
   }
 
   // Handle overtime clause (align with Live_Generation_2 logic)
-  const overtimeAnswer = answers["Is the employee entitled to overtime work?"] as boolean | null | undefined;
-  const overtimeYesClause = "{The Employee is entitled to overtime pay for authorized overtime work.}";
-  const overtimeNoClause = "{The Employee shall not receive additional payment for overtime worked.}";
+  const overtimeAnswer = answers[
+    "Is the employee entitled to overtime work?"
+  ] as boolean | null | undefined;
+  const overtimeYesClause =
+    "{The Employee is entitled to overtime pay for authorized overtime work.}";
+  const overtimeNoClause =
+    "{The Employee shall not receive additional payment for overtime worked.}";
 
   updatedHtml = updatedHtml.replace(
     /<p className="mt-5" id="employment-agreement-working-hours">([\s\S]*?)<\/p>/i,
@@ -95,7 +114,10 @@ const processAgreement = (html: string, answers: UserAnswers) => {
 
   // Process other placeholders
   Object.entries(answers).forEach(([question, answer]) => {
-    if (question === "What is the governing country?" || question === "Is the employee entitled to overtime work?") {
+    if (
+      question === "What is the governing country?" ||
+      question === "Is the employee entitled to overtime work?"
+    ) {
       return; // Skip these as they are handled separately
     }
 
@@ -108,9 +130,17 @@ const processAgreement = (html: string, answers: UserAnswers) => {
       );
     }
     if (placeholder) {
-      const escapedPlaceholder = placeholder.replace(/[.*+?^=!:${}()|\[\]\/\\]/g, "\\$&");
-      if (question === "What's the annual salary?" || question === "Specify the holiday pay?") {
-        const salaryData = answer as { amount: string; currency: string } | undefined;
+      const escapedPlaceholder = placeholder.replace(
+        /[.*+?^=!:${}()|\[\]\/\\]/g,
+        "\\$&"
+      );
+      if (
+        question === "What's the annual salary?" ||
+        question === "Specify the holiday pay?"
+      ) {
+        const salaryData = answer as
+          | { amount: string; currency: string }
+          | undefined;
         const formattedAmount = salaryData?.amount || `[${placeholder}]`;
         const formattedCurrency = salaryData?.currency || "USD";
         updatedHtml = updatedHtml.replace(
@@ -129,7 +159,10 @@ const processAgreement = (html: string, answers: UserAnswers) => {
               ""
             );
           }
-          updatedHtml = updatedHtml.replace(new RegExp(`.*${escapedPlaceholder}.*`, "gi"), "");
+          updatedHtml = updatedHtml.replace(
+            new RegExp(`.*${escapedPlaceholder}.*`, "gi"),
+            ""
+          );
         } else {
           updatedHtml = updatedHtml.replace(
             new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
@@ -149,7 +182,8 @@ const processAgreement = (html: string, answers: UserAnswers) => {
       }
     } else {
       if (question === "Is the sick pay policy applicable?") {
-        const sickPayClause = "{The Employee may also be entitled to Company sick pay of [Details of Company Sick Pay Policy]}";
+        const sickPayClause =
+          "{The Employee may also be entitled to Company sick pay of [Details of Company Sick Pay Policy]}";
         if (answer === false) {
           updatedHtml = updatedHtml.replace(sickPayClause, "");
         } else if (answer === true && answers["What's the sick pay policy?"]) {
@@ -159,19 +193,42 @@ const processAgreement = (html: string, answers: UserAnswers) => {
           );
         }
       } else if (question === "Is the termination clause applicable?") {
-        const terminationClauseStart = updatedHtml.indexOf('<h2 className="text-2xl font-bold mt-6">TERMINATION</h2>');
-        const terminationClauseEnd = updatedHtml.indexOf('<h2 className="text-2xl font-bold mt-6">CONFIDENTIALITY</h2>');
-        if (answer === false && terminationClauseStart !== -1 && terminationClauseEnd !== -1) {
-          updatedHtml = updatedHtml.slice(0, terminationClauseStart) + updatedHtml.slice(terminationClauseEnd);
+        const terminationClauseStart = updatedHtml.indexOf(
+          '<h2 className="text-2xl font-bold mt-6">TERMINATION</h2>'
+        );
+        const terminationClauseEnd = updatedHtml.indexOf(
+          '<h2 className="text-2xl font-bold mt-6">CONFIDENTIALITY</h2>'
+        );
+        if (
+          answer === false &&
+          terminationClauseStart !== -1 &&
+          terminationClauseEnd !== -1
+        ) {
+          updatedHtml =
+            updatedHtml.slice(0, terminationClauseStart) +
+            updatedHtml.slice(terminationClauseEnd);
         } else if (answer === true && answers["What's the notice period?"]) {
           updatedHtml = updatedHtml.replace(
             /\[Notice Period\]/gi,
             answers["What's the notice period?"] as string
           );
         }
-      } else if (question === "Is the previous service applicable?" && answer === false) {
-        const prevEmploymentClause = 'or, if applicable, "on [Previous Employment Start Date] with previous continuous service taken into account"';
-        updatedHtml = updatedHtml.replace(new RegExp(`\\s*${prevEmploymentClause.replace(/[.*+?^=!:${}()|\[\]\/\\]/g, "\\$&")}\\s*`, "gi"), "");
+      } else if (
+        question === "Is the previous service applicable?" &&
+        answer === false
+      ) {
+        const prevEmploymentClause =
+          'or, if applicable, "on [Previous Employment Start Date] with previous continuous service taken into account"';
+        updatedHtml = updatedHtml.replace(
+          new RegExp(
+            `\\s*${prevEmploymentClause.replace(
+              /[.*+?^=!:${}()|\[\]\/\\]/g,
+              "\\$&"
+            )}\\s*`,
+            "gi"
+          ),
+          ""
+        );
       }
     }
   });
@@ -219,6 +276,11 @@ const Finish = () => {
   const handleHomeClick = () => {
     navigate("/");
   };
+
+  const handleDashboardClick = () => {
+    navigate("/dashboard");
+  };
+
   const storedLevel = sessionStorage.getItem("level") ?? "none";
   return (
     <div
@@ -241,11 +303,13 @@ const Finish = () => {
           colors={["#5EEAD4", "#A78BFA", "#F9A8D4", "#FBBF24", "#60A5FA"]}
         />
       )}
-      <Navbar 
-        level={storedLevel} 
-        questionnaire="/Questionnaire" 
-        live_generation="/Live_Generation" 
-        {...(storedLevel === "/Level-Three-Quiz" ? { calculations: "/Calculations" } : {})}
+      <Navbar
+        level={storedLevel}
+        questionnaire="/Questionnaire"
+        live_generation="/Live_Generation"
+        {...(storedLevel === "/Level-Three-Quiz"
+          ? { calculations: "/Calculations" }
+          : {})}
       />
       <div className="flex justify-center mt-20 mb-12">
         <div
@@ -257,36 +321,52 @@ const Finish = () => {
         >
           <h1
             className={`text-4xl font-bold mb-12 tracking-wide text-center border-b-2 pb-4 ${
-              isDarkMode ? "text-teal-300 border-teal-600" : "text-teal-700 border-teal-200"
+              isDarkMode
+                ? "text-teal-300 border-teal-600"
+                : "text-teal-700 border-teal-200"
             }`}
           >
             EMPLOYMENT AGREEMENT
           </h1>
-          <div className={`${isDarkMode ? "text-teal-200" : "text-teal-900"} leading-relaxed`}>
+          <div
+            className={`${
+              isDarkMode ? "text-teal-200" : "text-teal-900"
+            } leading-relaxed`}
+          >
             {finalAgreement}
           </div>
         </div>
       </div>
       <div className="flex justify-center mb-12 space-x-8">
         <button
-          className={`px-8 py-3 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-300 font-semibold ${
+          className={`px-4 py-2 rounded-lg font-medium shadow-md transition-all duration-300 ${
             isDarkMode
-              ? "bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800"
-              : "bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500"
+              ? "bg-gray-700 text-teal-200 hover:bg-gray-600"
+              : "bg-teal-200 text-teal-900 hover:bg-cyan-200"
           }`}
           onClick={handleBackClick}
         >
           Back
         </button>
         <button
-          className={`px-8 py-3 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-300 font-semibold ${
+          className={`px-4 py-2 rounded-lg font-medium shadow-md transition-all duration-300 ${
             isDarkMode
-              ? "bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800"
-              : "bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500"
+              ? "bg-gray-700 text-teal-200 hover:bg-gray-600"
+              : "bg-teal-200 text-teal-900 hover:bg-cyan-200"
           }`}
           onClick={handleHomeClick}
         >
-          Return to Home Page
+          Home
+        </button>
+        <button
+          className={`px-4 py-2 rounded-lg font-medium shadow-md transition-all duration-300 ${
+            isDarkMode
+              ? "bg-gray-700 text-teal-200 hover:bg-gray-600"
+              : "bg-teal-200 text-teal-900 hover:bg-cyan-200"
+          }`}
+          onClick={handleDashboardClick}
+        >
+          Go to Dashboard
         </button>
       </div>
     </div>

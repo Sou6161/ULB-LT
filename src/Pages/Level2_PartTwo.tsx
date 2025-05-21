@@ -4,13 +4,14 @@ import { useState, useContext, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { useHighlightedText } from "../context/HighlightedTextContext";
 import { useQuestionType } from "../context/QuestionTypeContext";
-import EmploymentAgreement from "../utils/EmploymentAgreement";
+import EmploymentAgreement, { documentText } from "../utils/EmploymentAgreement";
 import { determineQuestionType } from "../utils/questionTypeUtils";
 import { ThemeContext } from "../context/ThemeContext";
 import AIAnalysisPanel from "../components/AIAnalysisPanel";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { CrispChat } from "../bot/knowledge";
 import { useScore } from "../context/ScoreContext";
+import parse from "html-react-parser";
 
 const icons = [
   { icon: <FaPenToSquare />, label: "Edit PlaceHolder" },
@@ -26,12 +27,17 @@ const LevelTwoPart_Two = () => {
   const { selectedTypes } = useQuestionType();
   const documentRef = useRef<HTMLDivElement>(null);
 
+  const navigate = useNavigate();
+
   // Scoring system
-  const { totalScore, updateScore, levelTwoScore, setLevelTwoScore } = useScore();
+  const { totalScore, updateScore, levelTwoScore, setLevelTwoScore } =
+    useScore();
   const [score, setScore] = useState<number>(levelTwoScore);
   const [scoreChange, setScoreChange] = useState<number | null>(null);
   const [foundPlaceholders, setFoundPlaceholders] = useState<string[]>([]);
-  const [foundSmallConditions, setFoundSmallConditions] = useState<string[]>([]);
+  const [foundSmallConditions, setFoundSmallConditions] = useState<string[]>(
+    []
+  );
   const [foundBigConditions, setFoundBigConditions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -78,8 +84,9 @@ const LevelTwoPart_Two = () => {
     let hasValidBrackets = false;
     let hasValidSpanClass = false;
 
-    if (selectedText.startsWith("[") && selectedText.endsWith("]")) {
-      textWithoutBrackets = selectedText.slice(1, -1);
+    // Check for Employer Name specifically, which still has square brackets
+    if (selectedText === "[Employer Name]") {
+      textWithoutBrackets = selectedText.slice(1, -1); // Remove [ and ]
       hasValidBrackets = true;
       hasValidSpanClass = true;
     } else if (selectedText.startsWith("{") && selectedText.endsWith("}")) {
@@ -89,11 +96,14 @@ const LevelTwoPart_Two = () => {
       textWithoutBrackets = selectedText.slice(1, -1);
       hasValidBrackets = true;
     } else {
+      // For placeholders without square brackets, rely on the span class
       const node = selection.anchorNode;
       if (node && node.parentElement) {
         const parent = node.parentElement;
         const classList = Array.from(parent.classList);
-        const placeholderClass = classList.find(cls => cls.startsWith("placeholder-"));
+        const placeholderClass = classList.find((cls) =>
+          cls.startsWith("placeholder-")
+        );
 
         if (placeholderClass) {
           hasValidSpanClass = true;
@@ -104,7 +114,8 @@ const LevelTwoPart_Two = () => {
 
     if (
       (label === "Edit PlaceHolder" && !hasValidSpanClass) ||
-      ((label === "Small Condition" || label === "Big Condition") && !hasValidBrackets)
+      ((label === "Small Condition" || label === "Big Condition") &&
+        !hasValidBrackets)
     ) {
       console.log("Selected text does not have valid brackets:", selectedText);
       return;
@@ -118,7 +129,10 @@ const LevelTwoPart_Two = () => {
 
     // Handle scoring
     if (isCorrectButton) {
-      if (label === "Edit PlaceHolder" && !foundPlaceholders.includes(textWithoutBrackets)) {
+      if (
+        label === "Edit PlaceHolder" &&
+        !foundPlaceholders.includes(textWithoutBrackets)
+      ) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
           updateScore(3); // Update totalScore
@@ -127,7 +141,10 @@ const LevelTwoPart_Two = () => {
         setScoreChange(3);
         setTimeout(() => setScoreChange(null), 2000);
         setFoundPlaceholders((prev) => [...prev, textWithoutBrackets]);
-      } else if (label === "Small Condition" && !foundSmallConditions.includes(textWithoutBrackets)) {
+      } else if (
+        label === "Small Condition" &&
+        !foundSmallConditions.includes(textWithoutBrackets)
+      ) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
           updateScore(3); // Update totalScore
@@ -136,7 +153,10 @@ const LevelTwoPart_Two = () => {
         setScoreChange(3);
         setTimeout(() => setScoreChange(null), 2000);
         setFoundSmallConditions((prev) => [...prev, textWithoutBrackets]);
-      } else if (label === "Big Condition" && !foundBigConditions.includes(textWithoutBrackets)) {
+      } else if (
+        label === "Big Condition" &&
+        !foundBigConditions.includes(textWithoutBrackets)
+      ) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
           updateScore(3); // Update totalScore
@@ -169,22 +189,42 @@ const LevelTwoPart_Two = () => {
       console.log("Selected Edit Placeholder:", textWithoutBrackets);
       addHighlightedText(textWithoutBrackets);
       const span = document.createElement("span");
-      span.style.backgroundColor = isDarkMode ? "rgba(255, 245, 157, 0.5)" : "rgba(255, 245, 157, 0.7)";
+      span.style.backgroundColor = isDarkMode
+        ? "rgba(255, 245, 157, 0.5)"
+        : "rgba(255, 245, 157, 0.7)";
       span.textContent = selectedText;
       range.deleteContents();
       range.insertNode(span);
     } else if (label === "Small Condition") {
-      if (!(selectedText.startsWith("{") && selectedText.endsWith("}")) || 
-          selectedText.length < 35 || 
-          selectedText.length > 450) return;
-      if (!highlightedTexts.includes(textWithoutBrackets) 
-        && !(highlightedTexts.includes("The Employee shall not receive additional payment for overtime worked") && textWithoutBrackets === "The Employee is entitled to overtime pay for authorized overtime work")
-        && !(highlightedTexts.includes("The Employee is entitled to overtime pay for authorized overtime work") && textWithoutBrackets === "The Employee shall not receive additional payment for overtime worked")
+      if (
+        !(selectedText.startsWith("{") && selectedText.endsWith("}")) ||
+        selectedText.length < 35 ||
+        selectedText.length > 450
+      )
+        return;
+      if (
+        !highlightedTexts.includes(textWithoutBrackets) &&
+        !(
+          highlightedTexts.includes(
+            "The Employee shall not receive additional payment for overtime worked"
+          ) &&
+          textWithoutBrackets ===
+            "The Employee is entitled to overtime pay for authorized overtime work"
+        ) &&
+        !(
+          highlightedTexts.includes(
+            "The Employee is entitled to overtime pay for authorized overtime work"
+          ) &&
+          textWithoutBrackets ===
+            "The Employee shall not receive additional payment for overtime worked"
+        )
       ) {
         addHighlightedText(textWithoutBrackets);
       }
       const span = document.createElement("span");
-      span.style.backgroundColor = isDarkMode ? "rgba(129, 236, 236, 0.5)" : "rgba(129, 236, 236, 0.7)";
+      span.style.backgroundColor = isDarkMode
+        ? "rgba(129, 236, 236, 0.5)"
+        : "rgba(129, 236, 236, 0.7)";
       span.textContent = selectedText;
       range.deleteContents();
       range.insertNode(span);
@@ -197,7 +237,10 @@ const LevelTwoPart_Two = () => {
       for (const heading of headingsToStrip) {
         if (textWithoutBrackets.startsWith(heading)) {
           clauseContent = textWithoutBrackets.slice(heading.length).trim();
-          console.log(`Stripped heading '${heading}', clauseContent:`, clauseContent);
+          console.log(
+            `Stripped heading '${heading}', clauseContent:`,
+            clauseContent
+          );
           break;
         }
       }
@@ -209,7 +252,9 @@ const LevelTwoPart_Two = () => {
       const applyHighlight = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
           const span = document.createElement("span");
-          span.style.backgroundColor = isDarkMode ? "rgba(186, 220, 88, 0.5)" : "rgba(186, 220, 88, 0.7)";
+          span.style.backgroundColor = isDarkMode
+            ? "rgba(186, 220, 88, 0.5)"
+            : "rgba(186, 220, 88, 0.7)";
           span.textContent = node.textContent || "";
           return span;
         } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -235,21 +280,29 @@ const LevelTwoPart_Two = () => {
       range.deleteContents();
       range.insertNode(fragment);
 
-      const probationClauseContent = "The first [Probation Period Length] of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
-      const pensionClauseContent = "The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.";
+      const probationClauseContent =
+        "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
+      const pensionClauseContent =
+        "The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.";
 
       const normalizeText = (text: string) => text.replace(/\s+/g, "");
       const normalizedSelectedText = normalizeText(textWithoutBrackets);
       const normalizedProbationClause = normalizeText(probationClauseContent);
       const normalizedPensionClause = normalizeText(pensionClauseContent);
 
-      const probationQuestion = "Is the clause of probationary period applicable?";
+      const probationQuestion =
+        "Is the clause of probationary period applicable?";
       const pensionQuestion = "Is the Pension clause applicable?";
 
       if (normalizedSelectedText === normalizedProbationClause) {
-        console.log("Probation Clause matched, checking for duplicate question");
+        console.log(
+          "Probation Clause matched, checking for duplicate question"
+        );
         if (!highlightedTexts.includes(probationQuestion)) {
-          console.log("Probation question not found, adding:", probationQuestion);
+          console.log(
+            "Probation question not found, adding:",
+            probationQuestion
+          );
           addHighlightedText(probationQuestion);
         } else {
           console.log("Probation question already exists, alerting user");
@@ -270,7 +323,51 @@ const LevelTwoPart_Two = () => {
     }
   };
 
-  const selectedPart = parseInt(localStorage.getItem("selectedPart") || "0", 10);
+  const selectedPart = parseInt(
+    localStorage.getItem("selectedPart") || "0",
+    10
+  );
+
+  // Function to process document text for Part 1 by removing round and curly brackets
+  const processDocumentTextForPart1 = (html: string) => {
+    let updatedHtml = html;
+
+    // Remove round brackets from Probationary Period clause
+    updatedHtml = updatedHtml.replace(
+      /<h2[^>]*>\(PROBATIONARY PERIOD<\/h2>\s*<p>([\s\S]*?)\)\s*<span[^>]*>\(Optional Clause\)<\/span>/i,
+      (_match, content) => {
+        return `<h2 className="text-2xl font-bold mt-6">PROBATIONARY PERIOD</h2><p className="mt-5">${content}</p><span className="text-black font-bold">(Optional Clause)</span>`;
+      }
+    );
+
+    // Remove round brackets from Pension clause
+    updatedHtml = updatedHtml.replace(
+      /<h2[^>]*>\(PENSION<\/h2>\s*<p>([\s\S]*?)\)/i,
+      (_match, content) => {
+        return `<h2 className="text-2xl font-bold mt-6">PENSION</h2><p className="mt-5">${content}</p>`;
+      }
+    );
+
+    // Remove curly brackets from small conditions globally
+    updatedHtml = updatedHtml.replace(
+      /\{([\s\S]*?)\}/g,
+      (_match, content) => content
+    );
+
+    // Remove curly brackets with slashes (e.g., {/The Employee may be required to work at other locations./})
+    updatedHtml = updatedHtml.replace(
+      /\{\/([\s\S]*?)\/\}/g,
+      (_match, content) => content
+    );
+
+    return updatedHtml;
+  };
+
+  // Conditionally process the EmploymentAgreement content
+  const documentContent =
+    selectedPart === 1
+      ? parse(processDocumentTextForPart1(documentText))
+      : <EmploymentAgreement />;
 
   return (
     <div
@@ -341,13 +438,17 @@ const LevelTwoPart_Two = () => {
             (label === "Small Condition" && selectedPart === 2) ||
             (label === "Big Condition" && selectedPart === 3) ||
             selectedPart === 4;
-        
+
           if (!shouldRender) return null;
-          
+
           return (
             <div key={index} className="relative flex items-center">
               <button
-                id={label === "Edit PlaceHolder" ? "edit-placeholder" : `icon-${label.toLowerCase().replace(" ", "-")}`}
+                id={
+                  label === "Edit PlaceHolder"
+                    ? "edit-placeholder"
+                    : `icon-${label.toLowerCase().replace(" ", "-")}`
+                }
                 className={`p-3 rounded-full shadow-lg transform hover:scale-110 transition-all duration-300 ease-in-out flex items-center justify-center text-2xl ${
                   isDarkMode
                     ? "bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800"
@@ -462,7 +563,7 @@ const LevelTwoPart_Two = () => {
               : "bg-white/80 backdrop-blur-md border-teal-100/20 bg-gradient-to-br from-teal-50/70 via-cyan-50/70 to-indigo-50/70"
           }`}
         >
-          <EmploymentAgreement />
+          {documentContent}
         </div>
         <AIAnalysisPanel
           documentText={getDocumentText()}
@@ -471,14 +572,16 @@ const LevelTwoPart_Two = () => {
         />
         <CrispChat websiteId="cf9c462c-73de-461e-badf-ab3a1133bdde" />
       </div>
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+      <div className="fixed bottom-6 left-14 transform -translate-x-1/2 z-50 flex gap-4">
         <button
-          onClick={() => window.location.href = "/dashboard"}
+          onClick={() => navigate(-1)}
           className={`px-4 py-2 rounded-lg font-medium shadow-md transition-all duration-300 ${
-            isDarkMode ? "bg-gray-700 text-teal-200 hover:bg-gray-600" : "bg-teal-200 text-teal-900 hover:bg-cyan-200"
+            isDarkMode
+              ? "bg-gray-700 text-teal-200 hover:bg-gray-600"
+              : "bg-teal-200 text-teal-900 hover:bg-cyan-200"
           }`}
         >
-          Home
+          Back
         </button>
       </div>
     </div>
