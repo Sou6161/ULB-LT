@@ -26,24 +26,22 @@ const LevelTwoPart_Two = () => {
   const { highlightedTexts, addHighlightedText } = useHighlightedText();
   const { selectedTypes } = useQuestionType();
   const documentRef = useRef<HTMLDivElement>(null);
-
   const navigate = useNavigate();
+  const isProcessingRef = useRef(false); // Prevent double-clicks
 
   // Scoring system
-  const { totalScore, updateScore, levelTwoScore, setLevelTwoScore } =
-    useScore();
+  const { totalScore, levelTwoScore, setLevelTwoScore } = useScore();
   const [score, setScore] = useState<number>(levelTwoScore);
   const [scoreChange, setScoreChange] = useState<number | null>(null);
   const [foundPlaceholders, setFoundPlaceholders] = useState<string[]>([]);
-  const [foundSmallConditions, setFoundSmallConditions] = useState<string[]>(
-    []
-  );
+  const [foundSmallConditions, setFoundSmallConditions] = useState<string[]>([]);
   const [foundBigConditions, setFoundBigConditions] = useState<string[]>([]);
 
+  // Sync local score with levelTwoScore
   useEffect(() => {
-    setLevelTwoScore(score);
-    updateScore(score - totalScore); // Synchronize totalScore with local score changes
-  }, [score, setLevelTwoScore, updateScore, totalScore]);
+    console.log(`levelTwoScore updated to ${levelTwoScore}, syncing local score`);
+    setScore(levelTwoScore);
+  }, [levelTwoScore]);
 
   useEffect(() => {
     console.log("LevelTwoPart_Two - Rendering at:", location.pathname);
@@ -74,15 +72,28 @@ const LevelTwoPart_Two = () => {
   };
 
   const handleIconClick = (label: string) => {
+    if (isProcessingRef.current) {
+      console.log("Click ignored: Processing another click");
+      return;
+    }
+    isProcessingRef.current = true;
+
+    console.log(`handleIconClick triggered for label: ${label}`);
+
     const selection = window.getSelection();
-    if (!selection || !selection.rangeCount) return;
+    if (!selection || !selection.rangeCount) {
+      console.log("No selection or range found");
+      isProcessingRef.current = false;
+      return;
+    }
 
     const range = selection.getRangeAt(0);
-    const selectedText = range.toString();
+    const selectedText = range.toString().trim();
 
     let textWithoutBrackets = selectedText;
     let hasValidBrackets = false;
     let hasValidSpanClass = false;
+    let fullPlaceholderText: string | null = null;
 
     // Check for Employer Name specifically, which still has square brackets
     if (selectedText === "[Employer Name]") {
@@ -91,6 +102,10 @@ const LevelTwoPart_Two = () => {
       hasValidSpanClass = true;
     } else if (selectedText.startsWith("{") && selectedText.endsWith("}")) {
       textWithoutBrackets = selectedText.slice(1, -1);
+      // Remove slashes for small conditions to match radioTypes keys
+      if (label === "Small Condition") {
+        textWithoutBrackets = textWithoutBrackets.replace(/\//g, "").trim();
+      }
       hasValidBrackets = true;
     } else if (selectedText.startsWith("(") && selectedText.endsWith(")")) {
       textWithoutBrackets = selectedText.slice(1, -1);
@@ -107,7 +122,19 @@ const LevelTwoPart_Two = () => {
 
         if (placeholderClass) {
           hasValidSpanClass = true;
-          textWithoutBrackets = parent.textContent || selectedText;
+          fullPlaceholderText = parent.textContent || selectedText;
+          textWithoutBrackets = fullPlaceholderText;
+
+          // Enforce exact match for the placeholder text
+          console.log(`Selected text: "${selectedText}"`);
+          console.log(`Full placeholder text: "${fullPlaceholderText}"`);
+          if (selectedText !== fullPlaceholderText) {
+            console.log(
+              `Selected text "${selectedText}" does not match full placeholder "${fullPlaceholderText}". Aborting.`
+            );
+            isProcessingRef.current = false;
+            return;
+          }
         }
       }
     }
@@ -118,6 +145,7 @@ const LevelTwoPart_Two = () => {
         !hasValidBrackets)
     ) {
       console.log("Selected text does not have valid brackets:", selectedText);
+      isProcessingRef.current = false;
       return;
     }
 
@@ -127,7 +155,7 @@ const LevelTwoPart_Two = () => {
       (label === "Small Condition" && hasValidBrackets) ||
       (label === "Big Condition" && hasValidBrackets);
 
-    // Handle scoring
+    // Handle scoring using context
     if (isCorrectButton) {
       if (
         label === "Edit PlaceHolder" &&
@@ -135,11 +163,15 @@ const LevelTwoPart_Two = () => {
       ) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
-          updateScore(3); // Update totalScore
+          console.log(`Edit PlaceHolder: Setting score to ${newScore}`);
+          setLevelTwoScore(newScore); // Updates both levelTwoScore and totalScore
           return newScore;
         });
         setScoreChange(3);
-        setTimeout(() => setScoreChange(null), 2000);
+        setTimeout(() => {
+          console.log("Resetting scoreChange");
+          setScoreChange(null);
+        }, 2000);
         setFoundPlaceholders((prev) => [...prev, textWithoutBrackets]);
       } else if (
         label === "Small Condition" &&
@@ -147,11 +179,15 @@ const LevelTwoPart_Two = () => {
       ) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
-          updateScore(3); // Update totalScore
+          console.log(`Small Condition: Setting score to ${newScore}`);
+          setLevelTwoScore(newScore); // Updates both levelTwoScore and totalScore
           return newScore;
         });
         setScoreChange(3);
-        setTimeout(() => setScoreChange(null), 2000);
+        setTimeout(() => {
+          console.log("Resetting scoreChange");
+          setScoreChange(null);
+        }, 2000);
         setFoundSmallConditions((prev) => [...prev, textWithoutBrackets]);
       } else if (
         label === "Big Condition" &&
@@ -159,31 +195,39 @@ const LevelTwoPart_Two = () => {
       ) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
-          updateScore(3); // Update totalScore
+          console.log(`Big Condition: Setting score to ${newScore}`);
+          setLevelTwoScore(newScore); // Updates both levelTwoScore and totalScore
           return newScore;
         });
         setScoreChange(3);
-        setTimeout(() => setScoreChange(null), 2000);
+        setTimeout(() => {
+          console.log("Resetting scoreChange");
+          setScoreChange(null);
+        }, 2000);
         setFoundBigConditions((prev) => [...prev, textWithoutBrackets]);
+      } else {
+        console.log(`Already scored for ${label}: ${textWithoutBrackets}`);
       }
     } else {
-      // Wrong button clicked - deduct 2 points
+      console.log(`Incorrect button for ${label}: Deducting 2 points`);
       setScore((prevScore) => {
         const newScore = Math.max(0, prevScore - 2);
-        updateScore(-2); // Update totalScore
+        console.log(`Incorrect selection: Setting score to ${newScore}`);
+        setLevelTwoScore(newScore); // Updates both levelTwoScore and totalScore
         return newScore;
       });
-      if (score > 0) {
-        setScoreChange(-2);
-        setTimeout(() => setScoreChange(null), 2000);
-      }
-      return;
+      setScoreChange(-2);
+      setTimeout(() => {
+        console.log("Resetting scoreChange");
+        setScoreChange(null);
+      }, 2000);
     }
 
     if (label === "Edit PlaceHolder") {
       if (highlightedTexts.includes(textWithoutBrackets)) {
         console.log("Placeholder already highlighted:", textWithoutBrackets);
         alert("This placeholder has already been added!");
+        isProcessingRef.current = false;
         return;
       }
       console.log("Selected Edit Placeholder:", textWithoutBrackets);
@@ -200,8 +244,11 @@ const LevelTwoPart_Two = () => {
         !(selectedText.startsWith("{") && selectedText.endsWith("}")) ||
         selectedText.length < 35 ||
         selectedText.length > 450
-      )
+      ) {
+        console.log("Invalid Small Condition selection:", selectedText);
+        isProcessingRef.current = false;
         return;
+      }
       if (
         !highlightedTexts.includes(textWithoutBrackets) &&
         !(
@@ -229,7 +276,11 @@ const LevelTwoPart_Two = () => {
       range.deleteContents();
       range.insertNode(span);
     } else if (label === "Big Condition") {
-      if (!(selectedText.startsWith("(") && selectedText.endsWith(")"))) return;
+      if (!(selectedText.startsWith("(") && selectedText.endsWith(")"))) {
+        console.log("Invalid Big Condition selection:", selectedText);
+        isProcessingRef.current = false;
+        return;
+      }
       console.log("Selected Big Condition:", selectedText);
 
       let clauseContent = textWithoutBrackets;
@@ -284,49 +335,12 @@ const LevelTwoPart_Two = () => {
         "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
       const pensionClauseContent =
         "The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.";
-
-      const normalizeText = (text: string) => text.replace(/\s+/g, "");
-      const normalizedSelectedText = normalizeText(textWithoutBrackets);
-      const normalizedProbationClause = normalizeText(probationClauseContent);
-      const normalizedPensionClause = normalizeText(pensionClauseContent);
-
-      const probationQuestion =
-        "Is the clause of probationary period applicable?";
-      const pensionQuestion = "Is the Pension clause applicable?";
-
-      if (normalizedSelectedText === normalizedProbationClause) {
-        console.log(
-          "Probation Clause matched, checking for duplicate question"
-        );
-        if (!highlightedTexts.includes(probationQuestion)) {
-          console.log(
-            "Probation question not found, adding:",
-            probationQuestion
-          );
-          addHighlightedText(probationQuestion);
-        } else {
-          console.log("Probation question already exists, alerting user");
-          alert("Probation clause question already added!");
-        }
-      } else if (normalizedSelectedText === normalizedPensionClause) {
-        console.log("Pension Clause matched, checking for duplicate question");
-        if (!highlightedTexts.includes(pensionQuestion)) {
-          console.log("Pension question not found, adding:", pensionQuestion);
-          addHighlightedText(pensionQuestion);
-        } else {
-          console.log("Pension question already exists, alerting user");
-          alert("Pension clause question already added!");
-        }
-      } else {
-        console.log("No clause matched.");
-      }
     }
+
+    isProcessingRef.current = false;
   };
 
-  const selectedPart = parseInt(
-    localStorage.getItem("selectedPart") || "0",
-    10
-  );
+  const selectedPart = parseInt(localStorage.getItem("selectedPart") || "0", 10);
 
   // Function to process document text for Part 1 by removing round and curly brackets
   const processDocumentTextForPart1 = (html: string) => {
@@ -349,16 +363,10 @@ const LevelTwoPart_Two = () => {
     );
 
     // Remove curly brackets from small conditions globally
-    updatedHtml = updatedHtml.replace(
-      /\{([\s\S]*?)\}/g,
-      (_match, content) => content
-    );
+    updatedHtml = updatedHtml.replace(/\{([\s\S]*?)\}/g, (_match, content) => content);
 
     // Remove curly brackets with slashes (e.g., {/The Employee may be required to work at other locations./})
-    updatedHtml = updatedHtml.replace(
-      /\{\/([\s\S]*?)\/\}/g,
-      (_match, content) => content
-    );
+    updatedHtml = updatedHtml.replace(/\{\/([\s\S]*?)\/\}/g, (_match, content) => content);
 
     return updatedHtml;
   };
@@ -384,33 +392,35 @@ const LevelTwoPart_Two = () => {
       />
 
       {/* Label for current level */}
-      {selectedPart === 1 && (
-        <h1
-          className={`text-center mt-24 text-3xl font-bold tracking-wide ${
-            isDarkMode ? "text-white" : "text-gray-800"
-          }`}
-        >
-          LEVEL 1: Automate Placeholders
-        </h1>
-      )}
-      {selectedPart === 2 && (
-        <h1
-          className={`text-center mt-24 text-3xl font-bold tracking-wide ${
-            isDarkMode ? "text-white" : "text-gray-800"
-          }`}
-        >
-          LEVEL 2: Automate Small Conditions
-        </h1>
-      )}
-      {selectedPart === 3 && (
-        <h1
-          className={`text-center mt-24 text-3xl font-bold tracking-wide ${
-            isDarkMode ? "text-white" : "text-gray-800"
-          }`}
-        >
-          LEVEL 3: Automate Big Conditions
-        </h1>
-      )}
+      <div className="text-center mt-24">
+        {selectedPart === 1 && (
+          <h1
+            className={`text-3xl font-bold tracking-wide ${
+              isDarkMode ? "text-white" : "text-gray-800"
+            }`}
+          >
+            LEVEL 1: Automate Placeholders
+          </h1>
+        )}
+        {selectedPart === 2 && (
+          <h1
+            className={`text-3xl font-bold tracking-wide ${
+              isDarkMode ? "text-white" : "text-gray-800"
+            }`}
+          >
+            LEVEL 2: Automate Small Conditions
+          </h1>
+        )}
+        {selectedPart === 3 && (
+          <h1
+            className={`text-3xl font-bold tracking-wide ${
+              isDarkMode ? "text-white" : "text-gray-800"
+            }`}
+          >
+            LEVEL 3: Automate Big Conditions
+          </h1>
+        )}
+      </div>
 
       {/* Score display */}
       <div className="fixed top-16 left-6 z-50 px-6 py-3">
@@ -431,6 +441,7 @@ const LevelTwoPart_Two = () => {
           )}
         </div>
       </div>
+
       <div className="fixed flex top-16 right-0 z-50 px-6 py-3 space-x-6">
         {icons.map(({ icon, label }, index) => {
           const shouldRender =
@@ -451,7 +462,7 @@ const LevelTwoPart_Two = () => {
                 }
                 className={`p-3 rounded-full shadow-lg transform hover:scale-110 transition-all duration-300 ease-in-out flex items-center justify-center text-2xl ${
                   isDarkMode
-                    ? "bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800"
+                    ? "bg-gradient-to-r from-gray-700 to-gray-800 text-white hover:from-gray-800 hover:to-gray-900"
                     : "bg-gradient-to-r from-teal-400 to-cyan-400 text-white hover:from-teal-500 hover:to-cyan-500"
                 }`}
                 onMouseEnter={() => setTooltip(label)}
@@ -475,6 +486,7 @@ const LevelTwoPart_Two = () => {
           );
         })}
       </div>
+
       <div
         className={`max-w-5xl mx-auto p-8 rounded-3xl shadow-2xl border mt-24 transform transition-all duration-500 hover:shadow-3xl ${
           isDarkMode
@@ -555,6 +567,7 @@ const LevelTwoPart_Two = () => {
           </div>
         )}
       </div>
+
       <div className="max-w-5xl mx-auto mt-10 px-8 pb-20" ref={documentRef}>
         <div
           className={`p-6 rounded-3xl shadow-xl border ${
@@ -572,6 +585,7 @@ const LevelTwoPart_Two = () => {
         />
         <CrispChat websiteId="cf9c462c-73de-461e-badf-ab3a1133bdde" />
       </div>
+
       <div className="fixed bottom-6 left-14 transform -translate-x-1/2 z-50 flex gap-4">
         <button
           onClick={() => navigate(-1)}

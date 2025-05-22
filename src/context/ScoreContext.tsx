@@ -1,98 +1,103 @@
-// // ScoreContext.tsx
-// import { createContext, useContext, useState } from 'react';
-
-// type ScoreContextType = {
-//   totalScore: number;
-//   updateScore: (delta: number) => void;
-//   resetScore: () => void;
-// };
-
-// const ScoreContext = createContext<ScoreContextType>({
-//   totalScore: 0,
-//   updateScore: () => {},
-//   resetScore: () => {},
-// });
-
-// export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
-//   const [totalScore, setTotalScore] = useState(0);
-
-//   const updateScore = (delta: number) => {
-//     setTotalScore(prev => Math.max(0, prev + delta)); // Ensure score doesn't go negative
-//   };
-
-//   const resetScore = () => {
-//     setTotalScore(0);
-//   };
-
-//   return (
-//     <ScoreContext.Provider value={{ totalScore, updateScore, resetScore }}>
-//       {children}
-//     </ScoreContext.Provider>
-//   );
-// };
-
-// export const useScore = () => useContext(ScoreContext);
-
-
-
-// ScoreContext.tsx
 import { createContext, useContext, useState, useEffect } from 'react';
 
 type ScoreContextType = {
   totalScore: number;
-  updateScore: (delta: number) => void;
-  resetScore: () => void;
   levelTwoScore: number;
-  setLevelTwoScore: (score: number) => void;
   questionnaireScore: number;
-  setQuestionnaireScore: (score: number) => void;
+  updateScore: (delta: number) => void;
+  setLevelTwoScore: (score: number) => void;
   updateQuestionnaireScore: (delta: number) => void;
+  resetAllScores: () => void;
 };
 
 const ScoreContext = createContext<ScoreContextType>({
   totalScore: 0,
-  updateScore: () => {},
-  resetScore: () => {},
   levelTwoScore: 0,
-  setLevelTwoScore: () => {},
   questionnaireScore: 0,
-  setQuestionnaireScore: () => {},
+  updateScore: () => {},
+  setLevelTwoScore: () => {},
   updateQuestionnaireScore: () => {},
+  resetAllScores: () => {},
 });
 
 export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
-  const [totalScore, setTotalScore] = useState(0);
-  const [levelTwoScore, setLevelTwoScore] = useState(0);
-  const [questionnaireScore, setQuestionnaireScore] = useState(0);
+  // Initialize scores from sessionStorage or default to 0
+  const [totalScore, setTotalScore] = useState(() => {
+    return parseInt(sessionStorage.getItem('totalScore') || '0', 10);
+  });
+  
+  const [levelTwoScore, setLevelTwoScore] = useState(() => {
+    return parseInt(sessionStorage.getItem('levelTwoScore') || '0', 10);
+  });
+  
+  const [questionnaireScore, setQuestionnaireScore] = useState(() => {
+    return parseInt(sessionStorage.getItem('questionnaireScore') || '0', 10);
+  });
 
-  // Initialize questionnaireScore with levelTwoScore when it changes
+  // Persist scores to sessionStorage whenever they change
   useEffect(() => {
-    setQuestionnaireScore(levelTwoScore);
+    sessionStorage.setItem('totalScore', totalScore.toString());
+  }, [totalScore]);
+
+  useEffect(() => {
+    sessionStorage.setItem('levelTwoScore', levelTwoScore.toString());
   }, [levelTwoScore]);
 
+  useEffect(() => {
+    sessionStorage.setItem('questionnaireScore', questionnaireScore.toString());
+  }, [questionnaireScore]);
+
   const updateScore = (delta: number) => {
-    setTotalScore(prev => Math.max(0, prev + delta)); // Ensure score doesn't go negative
+    setTotalScore(prev => {
+      const newScore = Math.max(0, prev + delta);
+      console.log(`updateScore: Total score updated to ${newScore} (delta: ${delta})`);
+      return newScore;
+    });
   };
 
-  const resetScore = () => {
-    setTotalScore(0);
+  const updateLevelTwoScore = (score: number) => {
+    setLevelTwoScore(score);
+    setTotalScore(prev => {
+      // Adjust totalScore to include levelTwoScore and questionnaireScore
+      const newTotal = score + questionnaireScore;
+      console.log(`updateLevelTwoScore: Level two score set to ${score}, totalScore updated to ${newTotal}`);
+      return newTotal;
+    });
   };
 
   const updateQuestionnaireScore = (delta: number) => {
-    setQuestionnaireScore((prevScore) => prevScore + delta);
+    setQuestionnaireScore(prev => {
+      const newScore = Math.max(0, prev + delta);
+      console.log(`updateQuestionnaireScore: Questionnaire score updated to ${newScore} (delta: ${delta})`);
+      return newScore;
+    });
+    setTotalScore(prev => {
+      const newTotal = levelTwoScore + (questionnaireScore + delta);
+      console.log(`updateQuestionnaireScore: Total score updated to ${newTotal}`);
+      return newTotal;
+    });
+  };
+
+  const resetAllScores = () => {
+    setTotalScore(0);
+    setLevelTwoScore(0);
+    setQuestionnaireScore(0);
+    sessionStorage.removeItem('totalScore');
+    sessionStorage.removeItem('levelTwoScore');
+    sessionStorage.removeItem('questionnaireScore');
+    console.log("resetAllScores: All scores reset");
   };
 
   return (
     <ScoreContext.Provider
-      value={{ 
+      value={{
         totalScore,
+        levelTwoScore,
+        questionnaireScore,
         updateScore,
-        resetScore,
-        levelTwoScore, 
-        setLevelTwoScore, 
-        questionnaireScore, 
-        setQuestionnaireScore, 
-        updateQuestionnaireScore 
+        setLevelTwoScore: updateLevelTwoScore,
+        updateQuestionnaireScore,
+        resetAllScores,
       }}
     >
       {children}

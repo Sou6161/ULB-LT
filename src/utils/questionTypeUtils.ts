@@ -1,6 +1,3 @@
-// import React from "react";
-// import { useHighlightedText } from "../context/HighlightedTextContext";
-
 export type QuestionType = "Radio" | "Text" | "Number" | "Date" | "Paragraph" | "Email" | "Unknown";
 
 export const textTypes: { [key: string]: string } = {
@@ -49,14 +46,14 @@ export const radioTypes: { [key: string]: string } = {
   "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.": "Is the clause of probationary period applicable?",
   "The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.": "Is the Pension clause applicable?",
   'or, if applicable, "on [Previous Employment Start Date] with previous continuous service taken into account"': "Is the previous service applicable?",
-  "The Employee may be required to perform additional duties as reasonably assigned by the Company.":"Is the Employee required to perform additional duties as part of their employment?",
+  "The Employee may be required to perform additional duties as reasonably assigned by the Company.": "Is the Employee required to perform additional duties as part of their employment?",
   "The Employee may also be entitled to Company sick pay.": "Would the Employee be entitled to Company Sick Pay?",
   "The Employee shall not receive additional payment for overtime worked": "Is the employee entitled to overtime work?",
   "After the probationary period, either party may terminate the employment by providing [Notice Period] written notice. The Company reserves the right to make a payment in lieu of notice. The Company may summarily dismiss the Employee without notice in cases of gross misconduct.": "Is the termination clause applicable?",
   "The Employee is entitled to overtime pay for authorized overtime work": "Is the employee entitled to overtime work?",
   "Upon termination, unused leave will be paid. For [Unused Holiday Days] unused days, the holiday pay is [Holiday Pay] [USD].": "Would unused holidays would be paid for if employee is termination?",
   "The Employee will be enrolled in the Company's pension scheme in accordance with auto-enrolment legislation. Further details are available from [HR/Relevant Contact].": "Is the Pension clause applicable?",
-  "/The Employee may be required to work at [other locations]./": "Does the employee need to work at additional locations besides the normal place of work?",
+  "The Employee may be required to work at other locations.": "Does the employee need to work at additional locations besides the normal place of work?",
   "The Employee may also be entitled to Company sick pay": "Is the sick pay policy applicable?",
   "The Employee is entitled to overtime pay at a rate of [Overtime Pay Rate] for authorized overtime work": "Does the employee receive overtime payment?"
 };
@@ -126,7 +123,6 @@ export const findPlaceholderByValue = (value: string): string | undefined => {
   );
 };
 
-
 export const determineQuestionType = (text: string): { 
   primaryType: QuestionType, 
   primaryValue: string, 
@@ -140,48 +136,66 @@ export const determineQuestionType = (text: string): {
   let alternateType: QuestionType | undefined;
   let alternateValue: string | undefined;
 
+  // Normalize the input text by removing curly brackets, square brackets, and extra spaces
+  const normalizedText = text
+    .replace(/[{}]/g, "") // Remove curly brackets
+    .replace(/\[|\]/g, "") // Remove square brackets
+    .trim();
+
   // Radio types (restrict to Radio only, including full clause)
   const fullProbationClause = "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
   const fullTerminationClause = "After the probationary period, either party may terminate the employment by providing [Notice Period] written notice. The Company reserves the right to make a payment in lieu of notice. The Company may summarily dismiss the Employee without notice in cases of gross misconduct.";
   const fullSickPayClause = "The Employee may also be entitled to Company sick pay of [Details of Company Sick Pay Policy]";
 
-  if (radioTypes.hasOwnProperty(text) || text === fullProbationClause || text === fullTerminationClause || text === fullSickPayClause) {
+  // Also normalize the full clauses for comparison
+  const normalizedFullProbationClause = fullProbationClause.replace(/\[|\]/g, "").trim();
+  const normalizedFullTerminationClause = fullTerminationClause.replace(/\[|\]/g, "").trim();
+  const normalizedFullSickPayClause = fullSickPayClause.replace(/\[|\]/g, "").trim();
+
+  if (
+    radioTypes.hasOwnProperty(normalizedText) ||
+    normalizedText === normalizedFullProbationClause ||
+    normalizedText === normalizedFullTerminationClause ||
+    normalizedText === normalizedFullSickPayClause
+  ) {
     primaryType = "Radio";
-    primaryValue = radioTypes[text] || radioTypes[fullProbationClause] || radioTypes[fullSickPayClause] || radioTypes[fullTerminationClause];
+    primaryValue =
+      radioTypes[normalizedText] ||
+      radioTypes[fullProbationClause] ||
+      radioTypes[fullSickPayClause] ||
+      radioTypes[fullTerminationClause];
     validTypes.push("Radio");
   }
 
   // Text types
-  if (textTypes.hasOwnProperty(text)) {
+  if (textTypes.hasOwnProperty(normalizedText)) {
     primaryType = "Text";
-    primaryValue = textTypes[text];
+    primaryValue = textTypes[normalizedText];
     validTypes = ["Text"];
   }
 
   // Number types
-  if (numberTypes.hasOwnProperty(text)) {
+  if (numberTypes.hasOwnProperty(normalizedText)) {
     if (primaryType === "Unknown") {
       primaryType = "Number";
-      primaryValue = numberTypes[text];
+      primaryValue = numberTypes[normalizedText];
     } else {
       alternateType = "Number";
-      alternateValue = numberTypes[text];
+      alternateValue = numberTypes[normalizedText];
     }
     validTypes.push("Number");
   }
 
-  if (dateTypes.hasOwnProperty(text)) {
+  if (dateTypes.hasOwnProperty(normalizedText)) {
     if (primaryType === "Unknown") {
       primaryType = "Date";
-      primaryValue = dateTypes[text];
+      primaryValue = dateTypes[normalizedText];
     } else {
       alternateType = "Date";
-      alternateValue = dateTypes[text];
+      alternateValue = dateTypes[normalizedText];
     }
     validTypes.push("Date");
   }
-
-  
 
   if (validTypes.length === 0) {
     return { primaryType: "Unknown", primaryValue: "", validTypes: ["Text", "Paragraph", "Email", "Number", "Date", "Radio"] };

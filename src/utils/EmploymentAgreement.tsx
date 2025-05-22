@@ -11,9 +11,7 @@ export const documentText = `
               <h2 className="text-2xl font-bold mt-6">PARTIES</h2>
               <p>
                   <strong>Employer:</strong> <span className="placeholder-employer-name">[Employer Name]</span>, a company incorporated
-                  and registered in <span className="placeholder-registered-address">Registered Address</span>, State of California 
-                  ("Company").
-              </p>
+                  and registered in <span className="placeholder-registered-address">Registered Address</span>, United Kingdom ("Company").
               <p>
                   <strong>Employee:</strong> <span className="placeholder-employee-name">Employee Name</span>, residing at <span className="placeholder-employee-address">Employee Address</span> ("Employee").
               </p>
@@ -57,48 +55,49 @@ export const documentText = `
           <div>
               <h2 className="text-2xl font-bold mt-6">REMUNERATION</h2>
               <p>
-                  The Employee shall receive a salary of <span className="placeholder-annual-salary">Annual Salary</span> [USD] per <span className="placeholder-payment-frequency">Payment Frequency</span>, payable in arrears on or before <span className="placeholder-payment-date">Payment Date</span> by direct bank transfer. The Company reserves the right to deduct from the Employee’s salary any sums owed to the Company, including but not limited to, overpaid salary, outstanding loans, or loss/damage of Company property.
+                  The Employee shall receive a salary of <span className="placeholder-annual-salary">Annual Salary</span> [USD] per <span className="placeholder-payment-frequency">Payment Frequency</span>, payable in arrears on or before <span className="placeholder-payment-date">Payment Date</span> by direct bank transfer. The Company reserves the right to deduct any sums lawfully due, including overpayments or losses caused by the Employee’s actions.
               </p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">HOLIDAY ENTITLEMENT</h2>
               <p>
-                 The Employee shall be entitled to <span className="placeholder-holiday-entitlement">Holiday Entitlement</span> days of paid annual leave per year, inclusive of public holidays. Unused leave may not be carried forward without prior approval. 
+                 The Employee shall be entitled to <span className="placeholder-holiday-entitlement">Holiday Entitlement</span> days of paid annual leave per year, including UK public holidays. Unused leave may not be carried forward without prior approval. 
                  {Upon termination, unused leave will be paid. For Unused Holiday Days unused days, the holiday pay is Holiday Pay [USD].}
               </p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">SICKNESS ABSENCE</h2>
               <p>
-                If the Employee is unable to work due to illness, they must notify the Company as soon as possible. Statutory Sick Pay (SSP) will be paid in accordance with government regulations. 
+                If the Employee is unable to work due to illness, they must notify the Company as soon as possible. Statutory Sick Pay (SSP) will be paid in accordance with current legislation. 
                 {The Employee may also be entitled to Company sick pay.}
               </p>
           </div>
           <div>
-              <h2 className="text-2xl font-bold mt-6">(PENSION</h2><p>The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.)</p>
+              <h2 className="text-2xl font-bold mt-6">(PENSION</h2><p>The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.)</p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">TERMINATION CLAUSE</h2>
               <p>
-                 Either party may terminate the employment by providing <span className="placeholder-notice-period">Notice Period</span> days written notice. The Company reserves the right to make a payment in lieu of notice. The Company may summarily dismiss the Employee without notice in cases of gross misconduct.
+                 Either party may terminate the employment by providing <span className="placeholder-notice-period">Notice Period</span> days written notice. The Company reserves the right to make a payment in lieu of notice.
               </p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">CONFIDENTIALITY</h2>
               <p>
-                  The Employee must not disclose any confidential information obtained during employment to any unauthorized person, both during and after employment.
+                  The Employee must not, during or after employment, disclose any confidential information belonging to the Company or its clients.
+
               </p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">DISCIPLINARY AND GRIEVANCE PROCEDURES</h2>
               <p>
-                  The Employee is subject to the Company’s disciplinary and grievance procedures.
+                  The Employee is subject to the Company’s disciplinary and grievance procedures, details of which are available upon request.
               </p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">GOVERNING LAW</h2>
               <p>
-                 This Agreement shall be governed by and construed in accordance with the laws of <span className="placeholder-governing-law">USA</span>. Any disputes arising from this Agreement shall be subject to the exclusive jurisdiction of the courts of <span className="placeholder-jurisdiction">USA</span>.
+                 This Agreement shall be governed by and construed in accordance with the laws of England and Wales. Any disputes arising from this Agreement shall be subject to the exclusive jurisdiction of the courts of England and Wales.
               </p>
           </div>
           <div>
@@ -132,8 +131,7 @@ const EmploymentAgreement: React.FC = () => {
         <p id="employer-name-placeholder">
           <strong>Employer:</strong>{" "}
           <span className="placeholder-employer-name">[Employer Name]</span>, a company incorporated and registered in{" "}
-          <span className="placeholder-registered-address">Registered Address</span>, State of
-          California ("Company").
+          <span className="placeholder-registered-address">Registered Address</span>, United Kingdom ("Company").
         </p>
         <p>
           <strong>Employee:</strong>{" "}
@@ -199,17 +197,14 @@ const EmploymentAgreement: React.FC = () => {
           <span className="placeholder-annual-salary">Annual Salary</span> [USD] per{" "}
           <span className="placeholder-payment-frequency">Payment Frequency</span>, payable in
           arrears on or before <span className="placeholder-payment-date">Payment Date</span> by
-          direct bank transfer. The Company reserves the right to deduct from
-          the Employee’s salary any sums owed to the Company, including but not
-          limited to, overpaid salary, outstanding loans, or loss/damage of
-          Company property.
+          direct bank transfer. The Company reserves the right to deduct any sums lawfully due, including overpayments or losses caused by the Employee’s actions.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">HOLIDAY ENTITLEMENT</h2>
         <p>
           The Employee shall be entitled to{" "}
           <span className="placeholder-holiday-entitlement">Holiday Entitlement</span> days of
-          paid annual leave per year, inclusive of public holidays. Unused leave
+          paid annual leave per year, including UK public holidays. Unused leave
           may not be carried forward without prior approval.{" "}
           {"{"}Upon termination, unused leave will be paid. For Unused Holiday
           Days unused days, the holiday pay is Holiday Pay [USD].{"}"}
@@ -219,47 +214,42 @@ const EmploymentAgreement: React.FC = () => {
         <p>
           If the Employee is unable to work due to illness, they must notify the
           Company as soon as possible. Statutory Sick Pay (SSP) will be paid in
-          accordance with government regulations.{" "}
+          accordance with current legislation.{" "}
           {"{"}The Employee may also be entitled to Company sick pay.{"}"}
         </p>
 
         <h2 className="text-2xl font-bold mt-6">(PENSION</h2>
         <p>
-          The Employee will be enrolled in the Company’s pension scheme in
-          accordance with auto-enrolment legislation.)
+         The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.)
         </p>
 
         <h2 className="text-2xl font-bold mt-6">TERMINATION CLAUSE</h2>
         <p>
           Either party may terminate the employment by providing{" "}
-          <span className="placeholder-notice-period">Notice Period</span> days written
-          notice. The Company reserves the right to make a payment in lieu of
-          notice. The Company may summarily dismiss the Employee without notice
-          in cases of gross misconduct.{" "}
+          <span className="placeholder-notice-period">Notice Period</span> weeks written
+          notice. The Company reserves the right to make a payment in lieu of notice.{" "}
           <span className="text-black font-bold">(Optional Clause)</span>
         </p>
 
         <h2 className="text-2xl font-bold mt-6">CONFIDENTIALITY</h2>
         <p>
-          The Employee must not disclose any confidential information obtained
-          during employment to any unauthorized person, both during and after
-          employment.
+          The Employee must not, during or after employment, disclose any confidential information belonging to the Company or its clients.
+
         </p>
 
         <h2 className="text-2xl font-bold mt-6">
           DISCIPLINARY AND GRIEVANCE PROCEDURES
         </h2>
         <p>
-          The Employee is subject to the Company’s disciplinary and grievance
-          procedures.
+         The Employee is subject to the Company’s disciplinary and grievance procedures, details of which are available upon request.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">GOVERNING LAW</h2>
         <p>
           This Agreement shall be governed by and construed in accordance with
-          the laws of <span className="placeholder-governing-law">USA</span>. Any disputes
+          the laws of England and Wales. Any disputes
           arising from this Agreement shall be subject to the exclusive
-          jurisdiction of the courts of <span className="placeholder-jurisdiction">USA</span>.
+          jurisdiction of the courts of England and Wales.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">SIGNED</h2>
