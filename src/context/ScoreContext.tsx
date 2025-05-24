@@ -57,7 +57,7 @@ export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateLevelTwoScore = (score: number) => {
     setLevelTwoScore(score);
-    setTotalScore(prev => {
+    setTotalScore(_prev => {
       // Adjust totalScore to include levelTwoScore and questionnaireScore
       const newTotal = score + questionnaireScore;
       console.log(`updateLevelTwoScore: Level two score set to ${score}, totalScore updated to ${newTotal}`);
@@ -71,7 +71,7 @@ export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
       console.log(`updateQuestionnaireScore: Questionnaire score updated to ${newScore} (delta: ${delta})`);
       return newScore;
     });
-    setTotalScore(prev => {
+    setTotalScore(_prev => {
       const newTotal = levelTwoScore + (questionnaireScore + delta);
       console.log(`updateQuestionnaireScore: Total score updated to ${newTotal}`);
       return newTotal;
