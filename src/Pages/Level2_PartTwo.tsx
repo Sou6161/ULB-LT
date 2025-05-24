@@ -31,7 +31,7 @@ const LevelTwoPart_Two = () => {
 
   // Scoring system
   const { totalScore, levelTwoScore, setLevelTwoScore } = useScore();
-  const [score, setScore] = useState<number>(levelTwoScore);
+  const [, setScore] = useState<number>(levelTwoScore);
   const [scoreChange, setScoreChange] = useState<number | null>(null);
   const [foundPlaceholders, setFoundPlaceholders] = useState<string[]>([]);
   const [foundSmallConditions, setFoundSmallConditions] = useState<string[]>([]);
@@ -336,10 +336,6 @@ const LevelTwoPart_Two = () => {
       range.deleteContents();
       range.insertNode(fragment);
 
-      const probationClauseContent =
-        "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
-      const pensionClauseContent =
-        "The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.";
     }
 
     isProcessingRef.current = false;

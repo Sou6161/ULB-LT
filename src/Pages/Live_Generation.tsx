@@ -1303,7 +1303,6 @@ const Live_Generation = () => {
       return;
     }
 
-    const totalQuestions = highlightedTexts.length;
     let correctAnswers = 0;
 
     editedQuestions.forEach((question) => {
@@ -1360,7 +1359,7 @@ const Live_Generation = () => {
 
   const selectedPart = localStorage.getItem("selectedPart");
   const levelPath = selectedPart === "4" ? "/Level-Two-Part-Two-Demo" : "/Level-Two-Part-Two";
-  const { totalScore, questionnaireScore } = useScore();
+  const { totalScore } = useScore();
 
   return (
     <div
