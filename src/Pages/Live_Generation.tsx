@@ -250,25 +250,19 @@ const Live_Generation = () => {
           ""
         );
       } else if (answer === true) {
-        // Special handling for the specific small condition to remove curly brackets
-        if (
-          smallCondition === "{/The Employee may be required to work at other locations./}"
-        ) {
-          // Remove the curly brackets for this specific condition
-          let conditionContent = smallCondition
-            .replace(/^\{\//, "")
-            .replace(/\/\}$/, "");
-          updatedText = updatedText.replace(
-            new RegExp(escapedCondition, "gi"),
-            conditionContent
-          );
-        } else {
-          // Keep curly brackets for other small conditions
-          updatedText = updatedText.replace(
-            new RegExp(escapedCondition, "gi"),
-            smallCondition
-          );
-        }
+        // Show the small condition if answer is "Yes" (true)
+        // Remove the curly braces and keep the content
+        let conditionContent = smallCondition
+          .replace(/^\{\//, "")
+          .replace(/\/\}$/, "");
+        // Handle cases where the condition starts with { and ends with } (without /)
+        conditionContent = conditionContent
+          .replace(/^\{/, "")
+          .replace(/\}$/, "");
+        updatedText = updatedText.replace(
+          new RegExp(escapedCondition, "gi"),
+          conditionContent
+        );
       }
     });
 
@@ -1467,7 +1461,7 @@ const Live_Generation = () => {
                     const className = domNode.attribs.className || "";
                     if (className.includes("bg-white")) {
                       domNode.attribs.className =
-                        "bg-white roundedizzarek rounded-lg shadow-sm border border-black-100 p-8";
+                        "bg-white rounded-lg shadow-sm border border-black-100 p-8";
                     }
                     if (className.includes("text-blue-600 leading-relaxed")) {
                       domNode.attribs.className =

@@ -101,11 +101,10 @@ const LevelTwoPart_Two = () => {
       hasValidBrackets = true;
       hasValidSpanClass = true;
     } else if (selectedText.startsWith("{") && selectedText.endsWith("}")) {
-      textWithoutBrackets = selectedText.slice(1, -1);
-      // Remove slashes for small conditions to match radioTypes keys
-      if (label === "Small Condition") {
-        textWithoutBrackets = textWithoutBrackets.replace(/\//g, "").trim();
-      }
+      // For small conditions, remove both curly brackets and slashes
+      textWithoutBrackets = selectedText
+        .slice(1, -1) // Remove { and }
+        .replace(/^\/|\/$/g, ""); // Remove leading and trailing slashes
       hasValidBrackets = true;
     } else if (selectedText.startsWith("(") && selectedText.endsWith(")")) {
       textWithoutBrackets = selectedText.slice(1, -1);
@@ -296,6 +295,12 @@ const LevelTwoPart_Two = () => {
         }
       }
 
+      // Ensure exact match with radioTypes key for pension clause
+      if (clauseContent.startsWith("The Employee will be enrolled in the Company’s")) {
+        clauseContent =
+          "The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.";
+      }
+
       addHighlightedText(clauseContent);
 
       const fragment = document.createDocumentFragment();
@@ -334,7 +339,7 @@ const LevelTwoPart_Two = () => {
       const probationClauseContent =
         "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
       const pensionClauseContent =
-        "The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.";
+        "The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.";
     }
 
     isProcessingRef.current = false;
@@ -462,7 +467,7 @@ const LevelTwoPart_Two = () => {
                 }
                 className={`p-3 rounded-full shadow-lg transform hover:scale-110 transition-all duration-300 ease-in-out flex items-center justify-center text-2xl ${
                   isDarkMode
-                    ? "bg-gradient-to-r from-gray-700 to-gray-800 text-white hover:from-gray-800 hover:to-gray-900"
+                    ? "bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800"
                     : "bg-gradient-to-r from-teal-400 to-cyan-400 text-white hover:from-teal-500 hover:to-cyan-500"
                 }`}
                 onMouseEnter={() => setTooltip(label)}

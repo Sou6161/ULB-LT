@@ -44,7 +44,7 @@ export const dateTypes: { [key: string]: string } = {
 
 export const radioTypes: { [key: string]: string } = {
   "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.": "Is the clause of probationary period applicable?",
-  "The Employee will be enrolled in the Company’s pension scheme in accordance with auto-enrolment legislation.": "Is the Pension clause applicable?",
+  "The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.": "Is the Pension clause applicable?",
   'or, if applicable, "on [Previous Employment Start Date] with previous continuous service taken into account"': "Is the previous service applicable?",
   "The Employee may be required to perform additional duties as reasonably assigned by the Company.": "Is the Employee required to perform additional duties as part of their employment?",
   "The Employee may also be entitled to Company sick pay.": "Would the Employee be entitled to Company Sick Pay?",
@@ -52,7 +52,6 @@ export const radioTypes: { [key: string]: string } = {
   "After the probationary period, either party may terminate the employment by providing [Notice Period] written notice. The Company reserves the right to make a payment in lieu of notice. The Company may summarily dismiss the Employee without notice in cases of gross misconduct.": "Is the termination clause applicable?",
   "The Employee is entitled to overtime pay for authorized overtime work": "Is the employee entitled to overtime work?",
   "Upon termination, unused leave will be paid. For [Unused Holiday Days] unused days, the holiday pay is [Holiday Pay] [USD].": "Would unused holidays would be paid for if employee is termination?",
-  "The Employee will be enrolled in the Company's pension scheme in accordance with auto-enrolment legislation. Further details are available from [HR/Relevant Contact].": "Is the Pension clause applicable?",
   "The Employee may be required to work at other locations.": "Does the employee need to work at additional locations besides the normal place of work?",
   "The Employee may also be entitled to Company sick pay": "Is the sick pay policy applicable?",
   "The Employee is entitled to overtime pay at a rate of [Overtime Pay Rate] for authorized overtime work": "Does the employee receive overtime payment?"
@@ -130,48 +129,97 @@ export const determineQuestionType = (text: string): {
   alternateType?: QuestionType, 
   alternateValue?: string 
 } => {
+  console.log("determineQuestionType called with text:", text);
+  console.log("text length:", text.length);
+
   let primaryType: QuestionType = "Unknown";
   let primaryValue: string = "";
-  let validTypes: QuestionType[] = [];
+  let validTypes: QuestionType[] = ["Text", "Paragraph", "Email", "Number", "Date", "Radio"]; // Always include all types
   let alternateType: QuestionType | undefined;
   let alternateValue: string | undefined;
 
-  // Normalize the input text by removing curly brackets, square brackets, and extra spaces
+  // Normalize the input text by removing curly brackets, square brackets, extra spaces, and non-breaking spaces
   const normalizedText = text
-    .replace(/[{}]/g, "") // Remove curly brackets
-    .replace(/\[|\]/g, "") // Remove square brackets
+    .replace(/[{}[\]]/g, "") // Remove curly and square brackets
+    .replace(/\s+/g, " ") // Normalize multiple spaces to single space
+    .replace(/\u00A0/g, " ") // Replace non-breaking spaces with regular spaces
     .trim();
+
+  console.log("Original text:", text);
+  console.log("Normalized text for comparison:", normalizedText);
+  console.log("Normalized text length:", normalizedText.length);
+  console.log("Radio types keys:", Object.keys(radioTypes));
+
+  // Normalize the radioTypes keys for comparison
+  const normalizedRadioTypes: { [key: string]: string } = {};
+  Object.keys(radioTypes).forEach((key) => {
+    const normalizedKey = key
+      .replace(/[{}[\]]/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/\u00A0/g, " ")
+      .trim();
+    normalizedRadioTypes[normalizedKey] = radioTypes[key];
+    console.log(`Normalized key: "${normalizedKey}", length: ${normalizedKey.length}, value: ${normalizedRadioTypes[normalizedKey]}`);
+  });
+
+  console.log("Normalized radio types keys:", Object.keys(normalizedRadioTypes));
+
+  // Check if the input text is already a question from radioTypes values
+  const radioQuestionMatch = Object.values(normalizedRadioTypes).find(
+    (question) => question === normalizedText
+  );
+  if (radioQuestionMatch) {
+    primaryType = "Radio";
+    primaryValue = radioQuestionMatch; // The question itself
+    console.log("Matched radio question:", radioQuestionMatch);
+  }
 
   // Radio types (restrict to Radio only, including full clause)
   const fullProbationClause = "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
   const fullTerminationClause = "After the probationary period, either party may terminate the employment by providing [Notice Period] written notice. The Company reserves the right to make a payment in lieu of notice. The Company may summarily dismiss the Employee without notice in cases of gross misconduct.";
   const fullSickPayClause = "The Employee may also be entitled to Company sick pay of [Details of Company Sick Pay Policy]";
+  const fullPensionClause = "The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.";
 
-  // Also normalize the full clauses for comparison
-  const normalizedFullProbationClause = fullProbationClause.replace(/\[|\]/g, "").trim();
-  const normalizedFullTerminationClause = fullTerminationClause.replace(/\[|\]/g, "").trim();
-  const normalizedFullSickPayClause = fullSickPayClause.replace(/\[|\]/g, "").trim();
+  // Normalize the full clauses for comparison
+  const normalizedFullProbationClause = fullProbationClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
+  const normalizedFullTerminationClause = fullTerminationClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
+  const normalizedFullSickPayClause = fullSickPayClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
+  const normalizedFullPensionClause = fullPensionClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
+
+  console.log("Checking normalizedText against normalized radio types keys...");
+  console.log("normalizedText:", normalizedText);
+  console.log("normalizedFullPensionClause:", normalizedFullPensionClause);
+  console.log("Match with normalizedFullPensionClause:", normalizedText === normalizedFullPensionClause);
+  console.log("Has normalizedText in normalizedRadioTypes:", normalizedRadioTypes.hasOwnProperty(normalizedText));
 
   if (
-    radioTypes.hasOwnProperty(normalizedText) ||
-    normalizedText === normalizedFullProbationClause ||
-    normalizedText === normalizedFullTerminationClause ||
-    normalizedText === normalizedFullSickPayClause
+    !radioQuestionMatch && // Skip if already matched as a radio question
+    (
+      normalizedRadioTypes.hasOwnProperty(normalizedText) ||
+      normalizedText === normalizedFullProbationClause ||
+      normalizedText === normalizedFullTerminationClause ||
+      normalizedText === normalizedFullSickPayClause ||
+      normalizedText === normalizedFullPensionClause
+    )
   ) {
     primaryType = "Radio";
     primaryValue =
-      radioTypes[normalizedText] ||
-      radioTypes[fullProbationClause] ||
-      radioTypes[fullSickPayClause] ||
-      radioTypes[fullTerminationClause];
-    validTypes.push("Radio");
+      normalizedRadioTypes[normalizedText] ||
+      normalizedRadioTypes[fullProbationClause] ||
+      normalizedRadioTypes[fullSickPayClause] ||
+      normalizedRadioTypes[fullTerminationClause] ||
+      normalizedRadioTypes[fullPensionClause] ||
+      "Is the clause applicable?";
+    console.log("Matched radio type with primaryValue:", primaryValue);
+  } else {
+    console.log("No match found in normalizedRadioTypes for:", normalizedText);
   }
 
   // Text types
   if (textTypes.hasOwnProperty(normalizedText)) {
     primaryType = "Text";
     primaryValue = textTypes[normalizedText];
-    validTypes = ["Text"];
+    console.log("Matched text type with primaryValue:", primaryValue);
   }
 
   // Number types
@@ -183,7 +231,7 @@ export const determineQuestionType = (text: string): {
       alternateType = "Number";
       alternateValue = numberTypes[normalizedText];
     }
-    validTypes.push("Number");
+    console.log("Matched number type with primaryValue:", primaryValue);
   }
 
   if (dateTypes.hasOwnProperty(normalizedText)) {
@@ -194,10 +242,11 @@ export const determineQuestionType = (text: string): {
       alternateType = "Date";
       alternateValue = dateTypes[normalizedText];
     }
-    validTypes.push("Date");
+    console.log("Matched date type with primaryValue:", primaryValue);
   }
 
-  if (validTypes.length === 0) {
+  if (primaryType === "Unknown" && primaryValue === "") {
+    console.log("No match found, returning Unknown type with all valid types");
     return { primaryType: "Unknown", primaryValue: "", validTypes: ["Text", "Paragraph", "Email", "Number", "Date", "Radio"] };
   }
 

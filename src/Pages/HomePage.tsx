@@ -13,7 +13,12 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => {
+    // Clear sessionStorage (as per existing functionality)
     sessionStorage.clear();
+    
+    // Clear questionnaireState from localStorage to reset question types
+    localStorage.removeItem("questionnaireState");
+    console.log("Cleared questionnaireState from localStorage on HomePage");
   }, []);
 
   const words = useMemo(
