@@ -503,57 +503,57 @@ const LevelTwoPart_Two = () => {
           ☑️ Selected Placeholders
         </h2>
         {highlightedTexts.length > 0 ? (
-          <ul
-            className={`space-y-3 p-5 rounded-xl shadow-inner ${
-              isDarkMode
-                ? "bg-gradient-to-r from-gray-700/70 via-gray-800/70 to-gray-900/70"
-                : "bg-gradient-to-r from-teal-50/70 via-cyan-50/70 to-indigo-50/70"
-            }`}
-          >
-            {[...new Set(highlightedTexts)].map((text, index) => {
-              const { primaryValue } = determineQuestionType(text);
-              const questionType = selectedTypes[index] || "Text";
-              return (
-                <li key={index} className="flex items-center justify-between">
-                  <div>
-                    <span
-                      className={`text-sm font-medium truncate max-w-xs ${
-                        isDarkMode ? "text-teal-200" : "text-teal-900"
-                      }`}
-                    >
-                      {primaryValue || text}
-                    </span>
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      isDarkMode
-                        ? "text-gray-300 bg-gray-500/50"
-                        : "text-gray-600 bg-teal-100/50"
-                    }`}
-                  >
-                    Type: {questionType}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <div
-            className={`text-center py-8 rounded-xl shadow-inner ${
-              isDarkMode
-                ? "bg-gradient-to-r from-gray-700/70 via-gray-800/70 to-gray-900/70"
-                : "bg-gradient-to-r from-teal-50/70 via-cyan-50/70 to-indigo-50/70"
-            }`}
-          >
-            <p
-              className={`italic text-lg ${
-                isDarkMode ? "text-teal-400" : "text-teal-600"
+  <ul
+    className={`space-y-3 p-5 rounded-xl shadow-inner ${
+      isDarkMode
+        ? "bg-gradient-to-r from-gray-700/70 via-gray-800/70 to-gray-900/70"
+        : "bg-gradient-to-r from-teal-50/70 via-cyan-50/70 to-indigo-50/70"
+    }`}
+  >
+    {[...new Set(highlightedTexts)].map((text, index) => {
+      const { primaryValue } = determineQuestionType(text);
+      const questionType = selectedTypes[index] || "Text";
+      return (
+        <li key={index} className="flex items-center justify-between">
+          <div>
+            <span
+              className={`text-sm font-medium truncate max-w-xs ${
+                isDarkMode ? "text-teal-200" : "text-teal-900"
               }`}
             >
-              No placeholders selected yet
-            </p>
+              {primaryValue || text}
+            </span>
           </div>
-        )}
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${
+              isDarkMode
+                ? "text-gray-300 bg-gray-500/50"
+                : "text-gray-600 bg-teal-100/50"
+            }`}
+          >
+            Type: {questionType}
+          </span>
+        </li>
+      );
+    })}
+  </ul>
+) : (
+  <div
+    className={`text-center py-8 rounded-xl shadow-inner ${
+      isDarkMode
+        ? "bg-gradient-to-r from-gray-700/70 via-gray-800/70 to-gray-900/70"
+        : "bg-gradient-to-r from-teal-50/70 via-cyan-50/70 to-indigo-50/70"
+    }`}
+  >
+    <p
+      className={`italic text-lg ${
+        isDarkMode ? "text-teal-400" : "text-teal-600"
+      }`}
+    >
+      No placeholders selected yet
+    </p>
+  </div>
+)}
         {highlightedTexts.length > 0 && (
           <div className="mt-5 text-right">
             <span
@@ -604,3 +604,8 @@ const LevelTwoPart_Two = () => {
 };
 
 export default LevelTwoPart_Two;
+
+
+
+
+// latest code

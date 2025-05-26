@@ -13,6 +13,7 @@ import { useScore } from "../context/ScoreContext";
 import { useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { determineQuestionType } from "../utils/questionTypeUtils";
+import { useUserAnswers } from "../context/UserAnswersContext"; // Add this import
 
 interface DivWithDropdownProps {
   textValue: string;
@@ -249,7 +250,7 @@ const Questionnaire = () => {
   const { totalScore, updateQuestionnaireScore } = useScore();
   const [leftActive, setLeftActive] = useState(true);
   const [rightActive, setRightActive] = useState(false);
-  const { highlightedTexts } = useHighlightedText();
+  const { highlightedTexts, setHighlightedTexts } = useHighlightedText(); // Updated to include setter
   const {
     selectedTypes,
     setSelectedTypes,
@@ -272,6 +273,7 @@ const Questionnaire = () => {
   const [typeChangedStates, setTypeChangedStates] = useState<boolean[]>([]);
   const feedbackId = useRef(0);
   const { updateQuestion, findPlaceholderByValue } = useQuestionEditContext();
+  const { setUserAnswers } = useUserAnswers(); // Add this to reset user answers
   const navigate = useNavigate();
   const prevHighlightedTextsRef = useRef<string[]>([]);
 
@@ -428,7 +430,6 @@ const Questionnaire = () => {
       order: number;
     }> = {};
 
-    // Use localStorage instead of sessionStorage to persist state across navigation
     const savedStateData = localStorage.getItem("questionnaireState");
     if (savedStateData) {
       try {
@@ -451,7 +452,7 @@ const Questionnaire = () => {
 
     const isAdditionalLocationsClauseSelected = uniqueHighlightedTexts.some(
       (text) =>
-        text === "The Employee may be required to work at other locations." || // Match normalized text
+        text === "The Employee may be required to work at other locations." ||
         text.includes(
           "The Employee may be required to work at [other locations]."
         ) ||
@@ -522,7 +523,7 @@ const Questionnaire = () => {
       if (
         text === smallConditionText ||
         text.includes(smallConditionTextWithoutBrackets) ||
-        text === "The Employee may be required to work at other locations." // Include normalized text
+        text === "The Employee may be required to work at other locations."
       ) {
         if (!orderedTexts.includes(text)) {
           orderedTexts.push(text);
@@ -557,13 +558,11 @@ const Questionnaire = () => {
       order: number;
     }> = {};
 
-    // Merge existing questions with new ones, preserving the state of previously answered questions
-    const allQuestionsMap = new Map<string, number>(); // Map text to its index in newUniqueQuestions
+    const allQuestionsMap = new Map<string, number>();
     orderedTexts.forEach((text, i) => {
       allQuestionsMap.set(text, i);
     });
 
-    // First, preserve the state of existing questions that are still present
     uniqueQuestions.forEach((text, oldIndex) => {
       const newIndex = allQuestionsMap.get(text);
       if (newIndex !== undefined) {
@@ -579,7 +578,6 @@ const Questionnaire = () => {
       }
     });
 
-    // Then, initialize new questions and override with saved state if available
     orderedTexts.forEach((text, i) => {
       const { primaryValue, primaryType } = enhancedDetermineQuestionType(text);
       const saved = savedState[text];
@@ -587,14 +585,13 @@ const Questionnaire = () => {
       const existing = existingIndex !== -1;
 
       const initialQuestionText = primaryValue || text;
-      const initialType = "Text"; // Always default to "Text" regardless of primaryType
+      const initialType = "Text";
 
       console.log(
         `Processing text "${text}": primaryType=${primaryType}, primaryValue=${primaryValue}, initialType=${initialType}, initialQuestionText=${initialQuestionText}`
       );
 
       if (saved) {
-        // If there's a saved state, use it
         newQuestionTexts[i] = saved.questionText || initialQuestionText;
         newSelectedTypes[i] = saved.type;
         newTypeChangedStates[i] = saved.typeChanged;
@@ -613,7 +610,6 @@ const Questionnaire = () => {
           `Restored saved state for question "${text}": type=${saved.type}, typeChanged=${saved.typeChanged}, questionText=${saved.questionText || initialQuestionText}`
         );
       } else if (existing) {
-        // If the question already exists in the current state, its state has already been copied above
         newState[text] = {
           type: newSelectedTypes[i],
           typeChanged: newTypeChangedStates[i],
@@ -629,7 +625,6 @@ const Questionnaire = () => {
           `Preserved existing state for question "${text}": type=${newSelectedTypes[i]}, typeChanged=${newTypeChangedStates[i]}, questionText=${newQuestionTexts[i] || initialQuestionText}`
         );
       } else {
-        // Initialize new questions
         newQuestionTexts[i] = initialQuestionText;
         newSelectedTypes[i] = initialType;
         newTypeChangedStates[i] = false;
@@ -666,7 +661,6 @@ const Questionnaire = () => {
     console.log("Final questionTexts:", newQuestionTexts);
     console.log("Final questionOrder:", newQuestionOrder);
 
-    // Save to localStorage instead of sessionStorage
     localStorage.setItem("questionnaireState", JSON.stringify(newState));
   }, [
     highlightedTexts,
@@ -861,6 +855,40 @@ const Questionnaire = () => {
     console.log("Updated typeChangedStates after reorder:", newTypeChangedStates);
   };
 
+  // Reset function to clear all related states and storage
+  const handleReset = () => {
+  // Clear local component states
+  setUniqueQuestions([]);
+  setQuestionOrder([]);
+  setQuestionTexts([]);
+  setSelectedTypes([]);
+  setTypeChangedStates([]);
+  setRequiredQuestions([]);
+  setScoredQuestions({});
+  setBonusAwarded(false);
+
+  // Clear contexts
+  setHighlightedTexts([]); // Reset highlighted texts
+  setEditedQuestions([]); // Reset edited questions
+  setSelectedTypes([]); // Reset selected types
+  setRequiredQuestions([]); // Reset required questions
+  setUserAnswers({}); // Reset user answers
+
+  // Clear storage, but preserve selectedPart
+  localStorage.removeItem("questionnaireState");
+  // Do NOT remove or reset selectedPart to preserve the current part
+  // localStorage.setItem("selectedPart", "1"); // Removed this line to preserve the current part
+  sessionStorage.removeItem("selectedQuestionTypes");
+  sessionStorage.removeItem("questionOrder_2");
+  sessionStorage.removeItem("userAnswers");
+  sessionStorage.removeItem("level");
+  sessionStorage.removeItem("selectedQuestionTypes_2");
+  sessionStorage.removeItem("typeChangedStates_2");
+  sessionStorage.removeItem("questionOrder_2");
+
+  console.log("All states and storage reset successfully, selectedPart preserved.");
+};
+
   const selectedPart = localStorage.getItem("selectedPart");
   const levelPath =
     selectedPart === "4" ? "/Level-Two-Part-Two-Demo" : "/Level-Two-Part-Two";
@@ -890,18 +918,7 @@ const Questionnaire = () => {
           Back
         </button>
         <button
-          onClick={() => {
-            localStorage.removeItem("questionnaireState");
-            setUniqueQuestions([]);
-            setSelectedTypes([]);
-            setTypeChangedStates([]);
-            setQuestionTexts([]);
-            setRequiredQuestions([]);
-            setQuestionOrder([]);
-            setScoredQuestions({});
-            setBonusAwarded(false);
-            console.log("Questionnaire state reset");
-          }}
+          onClick={handleReset} // Updated to use the new reset function
           className={`px-4 py-2 rounded-lg font-medium shadow-md transition-all duration-300 ${
             isDarkMode
               ? "bg-red-700 text-teal-200 hover:bg-red-600"
@@ -1102,3 +1119,7 @@ const Questionnaire = () => {
 };
 
 export default Questionnaire;
+
+
+
+// latest code
