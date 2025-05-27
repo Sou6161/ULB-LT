@@ -46,23 +46,23 @@ export const documentText = `
           <div>
               <h2 className="text-2xl font-bold mt-6">WORKING HOURS</h2>
               <p>
-                  The Employee’s normal working hours shall be <span className="placeholder-start-time">Start Time</span> to <span className="placeholder-end-time">End Time</span>, <span className="placeholder-days-of-work">Days of Work</span>. The Employee may be required to work additional hours as necessary to fulfill job responsibilities.
+                  The Employee’s normal working hours are <span className="placeholder-start-time">Start Time</span> to <span className="placeholder-end-time">End Time</span>, <span className="placeholder-days-of-work">Days of Work</span>. The Employee may be required to work additional hours as necessary to fulfill job responsibilities.
                   <p className="mt-5" id="employment-agreement-working-hours">
-                      {The Employee is entitled to overtime pay for authorized overtime work}  {The Employee shall not receive additional payment for overtime worked}.
+                      {The Employee is entitled to overtime pay for authorized overtime work} {The Employee shall not receive additional payment for overtime worked}
                   </p>
               </p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">REMUNERATION</h2>
               <p>
-                  The Employee shall receive a salary of <span className="placeholder-annual-salary">Annual Salary</span> [USD] per <span className="placeholder-payment-frequency">Payment Frequency</span>, payable in arrears on or before <span className="placeholder-payment-date">Payment Date</span> by direct bank transfer. The Company reserves the right to deduct any sums lawfully due, including overpayments or losses caused by the Employee’s actions.
+                  The Employee shall receive a salary of <span className="placeholder-annual-salary">Annual Salary</span> USD per <span className="placeholder-payment-frequency">Payment Frequency</span>, payable in arrears on or before <span className="placeholder-payment-date">Payment Date</span> by direct bank transfer. The Company reserves the right to deduct any sums lawfully due, including overpayments or losses caused by the Employee’s actions.
               </p>
           </div>
           <div>
               <h2 className="text-2xl font-bold mt-6">HOLIDAY ENTITLEMENT</h2>
               <p>
                  The Employee shall be entitled to <span className="placeholder-holiday-entitlement">Holiday Entitlement</span> days of paid annual leave per year, including UK public holidays. Unused leave may not be carried forward without prior approval. 
-                 {Upon termination, unused leave will be paid. For Unused Holiday Days unused days, the holiday pay is Holiday Pay [USD].}
+                 {Upon termination, unused leave will be paid. For Unused Holiday Days unused days, the holiday pay is Holiday Pay USD.}
               </p>
           </div>
           <div>
@@ -85,7 +85,6 @@ export const documentText = `
               <h2 className="text-2xl font-bold mt-6">CONFIDENTIALITY</h2>
               <p>
                   The Employee must not, during or after employment, disclose any confidential information belonging to the Company or its clients.
-
               </p>
           </div>
           <div>
@@ -187,14 +186,14 @@ const EmploymentAgreement: React.FC = () => {
             {"{"}The Employee is entitled to overtime pay for authorized overtime
             work{"}"}{" "}
             {"{"}The Employee shall not receive additional payment for overtime
-            worked{"}"}.
+            worked{"}"}
           </p>
         </p>
 
         <h2 className="text-2xl font-bold mt-6">REMUNERATION</h2>
         <p>
           The Employee shall receive a salary of{" "}
-          <span className="placeholder-annual-salary">Annual Salary</span> [USD] per{" "}
+          <span className="placeholder-annual-salary">Annual Salary</span> USD per{" "}
           <span className="placeholder-payment-frequency">Payment Frequency</span>, payable in
           arrears on or before <span className="placeholder-payment-date">Payment Date</span> by
           direct bank transfer. The Company reserves the right to deduct any sums lawfully due, including overpayments or losses caused by the Employee’s actions.
@@ -207,7 +206,7 @@ const EmploymentAgreement: React.FC = () => {
           paid annual leave per year, including UK public holidays. Unused leave
           may not be carried forward without prior approval.{" "}
           {"{"}Upon termination, unused leave will be paid. For Unused Holiday
-          Days unused days, the holiday pay is Holiday Pay [USD].{"}"}
+          Days unused days, the holiday pay is Holiday Pay USD.{"}"}
         </p>
 
         <h2 className="text-2xl font-bold mt-6">SICKNESS ABSENCE</h2>
@@ -234,7 +233,6 @@ const EmploymentAgreement: React.FC = () => {
         <h2 className="text-2xl font-bold mt-6">CONFIDENTIALITY</h2>
         <p>
           The Employee must not, during or after employment, disclose any confidential information belonging to the Company or its clients.
-
         </p>
 
         <h2 className="text-2xl font-bold mt-6">
@@ -283,6 +281,3 @@ const EmploymentAgreement: React.FC = () => {
 };
 
 export default EmploymentAgreement;
-
-
-// latest code

@@ -13,7 +13,7 @@ import { useScore } from "../context/ScoreContext";
 import { useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { determineQuestionType } from "../utils/questionTypeUtils";
-import { useUserAnswers } from "../context/UserAnswersContext"; // Add this import
+import { useUserAnswers } from "../context/UserAnswersContext";
 
 interface DivWithDropdownProps {
   textValue: string;
@@ -247,10 +247,10 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
 
 const Questionnaire = () => {
   const { isDarkMode } = useContext(ThemeContext);
-  const { totalScore, updateQuestionnaireScore } = useScore();
+  const { totalScore, updateQuestionnaireScore, resetAllScores } = useScore();
   const [leftActive, setLeftActive] = useState(true);
   const [rightActive, setRightActive] = useState(false);
-  const { highlightedTexts, setHighlightedTexts } = useHighlightedText(); // Updated to include setter
+  const { highlightedTexts, setHighlightedTexts } = useHighlightedText();
   const {
     selectedTypes,
     setSelectedTypes,
@@ -273,7 +273,7 @@ const Questionnaire = () => {
   const [typeChangedStates, setTypeChangedStates] = useState<boolean[]>([]);
   const feedbackId = useRef(0);
   const { updateQuestion, findPlaceholderByValue } = useQuestionEditContext();
-  const { setUserAnswers } = useUserAnswers(); // Add this to reset user answers
+  const { setUserAnswers } = useUserAnswers();
   const navigate = useNavigate();
   const prevHighlightedTextsRef = useRef<string[]>([]);
 
@@ -855,39 +855,39 @@ const Questionnaire = () => {
     console.log("Updated typeChangedStates after reorder:", newTypeChangedStates);
   };
 
-  // Reset function to clear all related states and storage
   const handleReset = () => {
-  // Clear local component states
-  setUniqueQuestions([]);
-  setQuestionOrder([]);
-  setQuestionTexts([]);
-  setSelectedTypes([]);
-  setTypeChangedStates([]);
-  setRequiredQuestions([]);
-  setScoredQuestions({});
-  setBonusAwarded(false);
+    // Clear local component states
+    setUniqueQuestions([]);
+    setQuestionOrder([]);
+    setQuestionTexts([]);
+    setSelectedTypes([]);
+    setTypeChangedStates([]);
+    setRequiredQuestions([]);
+    setScoredQuestions({});
+    setBonusAwarded(false);
 
-  // Clear contexts
-  setHighlightedTexts([]); // Reset highlighted texts
-  setEditedQuestions([]); // Reset edited questions
-  setSelectedTypes([]); // Reset selected types
-  setRequiredQuestions([]); // Reset required questions
-  setUserAnswers({}); // Reset user answers
+    // Clear contexts
+    setHighlightedTexts([]);
+    setEditedQuestions([]);
+    setSelectedTypes([]);
+    setRequiredQuestions([]);
+    setUserAnswers({});
 
-  // Clear storage, but preserve selectedPart
-  localStorage.removeItem("questionnaireState");
-  // Do NOT remove or reset selectedPart to preserve the current part
-  // localStorage.setItem("selectedPart", "1"); // Removed this line to preserve the current part
-  sessionStorage.removeItem("selectedQuestionTypes");
-  sessionStorage.removeItem("questionOrder_2");
-  sessionStorage.removeItem("userAnswers");
-  sessionStorage.removeItem("level");
-  sessionStorage.removeItem("selectedQuestionTypes_2");
-  sessionStorage.removeItem("typeChangedStates_2");
-  sessionStorage.removeItem("questionOrder_2");
+    // Reset scores
+    resetAllScores();
 
-  console.log("All states and storage reset successfully, selectedPart preserved.");
-};
+    // Clear storage, but preserve selectedPart
+    localStorage.removeItem("questionnaireState");
+    sessionStorage.removeItem("selectedQuestionTypes");
+    sessionStorage.removeItem("questionOrder_2");
+    sessionStorage.removeItem("userAnswers");
+    sessionStorage.removeItem("level");
+    sessionStorage.removeItem("selectedQuestionTypes_2");
+    sessionStorage.removeItem("typeChangedStates_2");
+    sessionStorage.removeItem("questionOrder_2");
+
+    console.log("All states, storage, and scores reset successfully, selectedPart preserved.");
+  };
 
   const selectedPart = localStorage.getItem("selectedPart");
   const levelPath =
@@ -918,7 +918,7 @@ const Questionnaire = () => {
           Back
         </button>
         <button
-          onClick={handleReset} // Updated to use the new reset function
+          onClick={handleReset}
           className={`px-4 py-2 rounded-lg font-medium shadow-md transition-all duration-300 ${
             isDarkMode
               ? "bg-red-700 text-teal-200 hover:bg-red-600"
@@ -1119,7 +1119,6 @@ const Questionnaire = () => {
 };
 
 export default Questionnaire;
-
 
 
 // latest code

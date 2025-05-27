@@ -142,6 +142,7 @@ const Live_Generation = () => {
   const [certificationMessage, setCertificationMessage] = useState("");
   const [showWarning, setShowWarning] = useState(false);
   const [calculatedScore, setCalculatedScore] = useState<number>(0);
+  const { totalScore } = useScore();
 
   // Load userAnswers from sessionStorage on component mount
   useEffect(() => {
@@ -230,397 +231,468 @@ const Live_Generation = () => {
       '{or, if applicable, "on Previous Employment Start Date with previous continuous service taken into account"}',
     "Is the Employee required to perform additional duties as part of their employment?":
       "{The Employee may be required to perform additional duties as reasonably assigned by the Company.}",
-    // Add more mappings for other small conditions enclosed in curly brackets as needed
+    // Note: Overtime conditions are handled separately below
   };
 
   useEffect(() => {
-    let updatedText = documentText;
+  let updatedText = documentText;
 
-    // Step 1: Handle small conditions (text in curly brackets) dynamically
-    Object.entries(smallConditionsMap).forEach(([question, smallCondition]) => {
-      const answer = userAnswers[question];
-      const escapedCondition = smallCondition.replace(
+  // Debugging: Log initial documentText to check for sick pay condition
+  console.log("Initial documentText contains sick pay condition:", documentText.includes("{The Employee may also be entitled to Company sick pay.}"));
+
+  // Step 1: Hide both overtime small conditions by default
+  const overtimeYesClause = "{The Employee is entitled to overtime pay for authorized overtime work}";
+  const overtimeNoClause = "{The Employee shall not receive additional payment for overtime worked}";
+  updatedText = updatedText.replace(
+    new RegExp(overtimeYesClause.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+    ""
+  );
+  updatedText = updatedText.replace(
+    new RegExp(overtimeNoClause.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+    ""
+  );
+
+  // Step 2: Handle overtime conditions based on user answer
+  const overtimeAnswer = userAnswers["Is the employee entitled to overtime work?"];
+  updatedText = updatedText.replace(
+    /<p className="mt-5" id="employment-agreement-working-hours">([\s\S]*?)<\/p>/i,
+    (_match, existingContent) => {
+      let replacementText = existingContent.trim();
+      replacementText = replacementText
+        .replace(
+          new RegExp(overtimeYesClause.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+          ""
+        )
+        .replace(
+          new RegExp(overtimeNoClause.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+          ""
+        );
+      if (overtimeAnswer === true) {
+        replacementText = `${replacementText} The Employee is entitled to overtime pay for authorized overtime work.`.trim();
+      } else if (overtimeAnswer === false) {
+        replacementText = `${replacementText} The Employee shall not receive additional payment for overtime worked.`.trim();
+      }
+      return `<p className="mt-5" id="employment-agreement-working-hours">${replacementText}</p>`;
+    }
+  );
+
+  // Step 3: Handle holiday pay small condition
+  const holidayPayCondition = "{Upon termination, unused leave will be paid. For Unused Holiday Days unused days, the holiday pay is Holiday Pay USD.}";
+  const holidayPayAnswer = userAnswers["Would unused holidays would be paid for if employee is termination?"];
+  const escapedHolidayPayCondition = holidayPayCondition.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  
+  if (holidayPayAnswer !== true) {
+    updatedText = updatedText.replace(
+      new RegExp(escapedHolidayPayCondition, "gi"),
+      ""
+    );
+  } else {
+    let conditionContent = holidayPayCondition
+      .replace(/^\{/, "")
+      .replace(/\}$/, "");
+    
+    const unusedHolidayDaysAnswer = userAnswers["Unused Holiday Days"] as string;
+    if (unusedHolidayDaysAnswer && typeof unusedHolidayDaysAnswer === "string") {
+      const storedOperationType = localStorage.getItem("operationType");
+      const storedOperationValue = localStorage.getItem("operationValue");
+      const operationValue = storedOperationValue ? parseFloat(storedOperationValue) : null;
+      let calculatedValue: number | null = null;
+      const floatAnswer = parseFloat(unusedHolidayDaysAnswer).toFixed(2);
+      const numericAnswer = parseFloat(floatAnswer);
+      
+      if (storedOperationType && operationValue !== null) {
+        switch (storedOperationType.toLowerCase()) {
+          case "add":
+            calculatedValue = numericAnswer + operationValue;
+            break;
+          case "subtract":
+            calculatedValue = numericAnswer - operationValue;
+            break;
+          case "multiply":
+            calculatedValue = numericAnswer * operationValue;
+            break;
+          case "divide":
+            calculatedValue = operationValue !== 0 ? numericAnswer / operationValue : null;
+            break;
+          default:
+            calculatedValue = null;
+        }
+      }
+      localStorage.setItem(
+        "calculatedValue",
+        calculatedValue !== null ? String(calculatedValue) : "0"
+      );
+
+      conditionContent = conditionContent.replace(
+        /Unused Holiday Days/gi,
+        `<span class="${
+          isDarkMode
+            ? "bg-teal-600/70 text-teal-100"
+            : "bg-teal-200/70 text-teal-900"
+        } px-1 rounded">${unusedHolidayDaysAnswer}</span>`
+      );
+      conditionContent = conditionContent.replace(
+        /Holiday Pay/gi,
+        `<span class="${
+          isDarkMode
+            ? "bg-teal-600/70 text-teal-100"
+            : "bg-teal-200/70 text-teal-900"
+        } px-1 rounded">${calculatedValue !== null ? calculatedValue : "Holiday Pay"}</span>`
+      );
+    }
+
+    updatedText = updatedText.replace(
+      new RegExp(escapedHolidayPayCondition, "gi"),
+      conditionContent
+    );
+  }
+
+  // Step 4: Handle sick pay small condition
+  const sickPayCondition = "{The Employee may also be entitled to Company sick pay.}";
+  const sickPayAnswer = userAnswers["Would the Employee be entitled to Company Sick Pay?"];
+  const escapedSickPayCondition = sickPayCondition.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  
+  // Debugging: Log sick pay answer and policy details
+  console.log("sickPayAnswer:", sickPayAnswer);
+  console.log("sickPayPolicyAnswer:", userAnswers["What's the sick pay policy?"]);
+  
+  if (sickPayAnswer !== true) {
+    // Hide the sick pay condition
+    updatedText = updatedText.replace(
+      new RegExp(escapedSickPayCondition, "gi"),
+      ""
+    );
+  } else {
+    // Show the sick pay condition and append policy details
+    let conditionContent = sickPayCondition
+      .replace(/^\{/, "")
+      .replace(/\}$/, "");
+    
+    // Handle Details of Company Sick Pay Policy placeholder
+    const sickPayPolicyAnswer = userAnswers["What's the sick pay policy?"] as string;
+    if (sickPayPolicyAnswer && typeof sickPayPolicyAnswer === "string") {
+      conditionContent = `${conditionContent} <span class="${
+        isDarkMode
+          ? "bg-teal-600/70 text-teal-100"
+          : "bg-teal-200/70 text-teal-900"
+      } px-1 rounded">${sickPayPolicyAnswer}</span>`;
+    }
+
+    updatedText = updatedText.replace(
+      new RegExp(escapedSickPayCondition, "gi"),
+      conditionContent
+    );
+  }
+
+  // Debugging: Log updatedText to check if sick pay condition is included
+  console.log("updatedText after sick pay processing:", updatedText.includes("The Employee may also be entitled to Company sick pay."));
+
+  // Step 5: Handle other small conditions (enclosed in curly brackets) dynamically
+  Object.entries(smallConditionsMap).forEach(([question, smallCondition]) => {
+    // Skip sick pay condition to avoid double processing
+    if (smallCondition === "{The Employee may also be entitled to Company sick pay.}") {
+      return;
+    }
+    const answer = userAnswers[question];
+    const escapedCondition = smallCondition.replace(
+      /[.*+?^=!:${}()|\[\]\/\\]/g,
+      "\\$&"
+    );
+    if (answer === false || answer === null || answer === undefined) {
+      updatedText = updatedText.replace(
+        new RegExp(escapedCondition, "gi"),
+        ""
+      );
+    } else if (answer === true) {
+      let conditionContent = smallCondition
+        .replace(/^\{\//, "")
+        .replace(/\/\}$/, "")
+        .replace(/^\{/, "")
+        .replace(/\}$/, "");
+      updatedText = updatedText.replace(
+        new RegExp(escapedCondition, "gi"),
+        conditionContent
+      );
+    }
+  });
+
+  // Step 6: Hide probationary clause by default; only show if explicitly true
+  const probationAnswer = userAnswers["Is the clause of probationary period applicable?"];
+  if (probationAnswer !== true) {
+    updatedText = updatedText.replace(
+      /<h2[^>]*>[^<]*PROBATIONARY PERIOD[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?(<span[^>]*>\(Optional Clause\)<\/span>)?\s*<\/p>/i,
+      ""
+    );
+  } else {
+    const probationSectionMatch = updatedText.match(
+      /<h2[^>]*>[^<]*PROBATIONARY PERIOD[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?(<span[^>]*>\(Optional Clause\)<\/span>)?\s*<\/p>/i
+    );
+    if (!probationSectionMatch) {
+      const originalSection = documentText.match(
+        /<h2[^>]*>[^<]*PROBATIONARY PERIOD[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?(<span[^>]*>\(Optional Clause\)<\/span>)?\s*<\/p>/i
+      );
+      if (originalSection) {
+        updatedText = updatedText.replace(
+          /(<h2[^>]*>[^<]*EMPLOYMENT AGREEMENT[^<]*<\/h2>)/i,
+          `$1\n${originalSection[0]}`
+        );
+      }
+    }
+  }
+
+  // Step 7: Hide pension clause by default; only show if explicitly true
+  const pensionAnswer = userAnswers["Is the Pension clause applicable?"];
+  if (pensionAnswer !== true) {
+    updatedText = updatedText.replace(
+      /<h2[^>]*>[^<]*PENSION[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?<\/p>/i,
+      ""
+    );
+  } else {
+    const pensionSectionMatch = updatedText.match(
+      /<h2[^>]*>[^<]*PENSION[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?<\/p>/i
+    );
+    if (!pensionSectionMatch) {
+      const originalSection = documentText.match(
+        /<h2[^>]*>[^<]*PENSION[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?<\/p>/i
+      );
+      if (originalSection) {
+        updatedText = updatedText.replace(
+          /(<h2[^>]*>[^<]*EMPLOYMENT AGREEMENT[^<]*<\/h2>)/i,
+          `$1\n${originalSection[0]}`
+        );
+      }
+    }
+  }
+
+  // Step 8: Handle additional locations formatting
+  const additionalLocationsAnswer =
+    userAnswers[
+      "Does the employee need to work at additional locations besides the normal place of work?"
+    ];
+  if (additionalLocationsAnswer === true) {
+    const locationsAnswer = userAnswers[
+      "What is the additional work location?"
+    ] as string;
+    let formattedLocations = "";
+    if (locationsAnswer) {
+      const locationsArray = locationsAnswer
+        .split(/\s*,\s*|\s*and\s*|\s*, and\s*/)
+        .filter(Boolean);
+      if (locationsArray.length === 1) {
+        formattedLocations = locationsArray[0];
+      } else if (locationsArray.length === 2) {
+        formattedLocations = locationsArray.join(" and ");
+      } else {
+        formattedLocations = `${locationsArray
+          .slice(0, -1)
+          .join(", ")}, and ${locationsArray[locationsArray.length - 1]}`;
+      }
+    } else {
+      formattedLocations = "other locations";
+    }
+    updatedText = updatedText.replace(
+      /other locations/gi,
+      `<span class="${
+        isDarkMode
+          ? "bg-teal-600/70 text-teal-100"
+          : "bg-teal-200/70 text-teal-900"
+      } px-1 rounded">${formattedLocations}</span>`
+    );
+  }
+
+  // Step 9: Handle all placeholders
+  Object.entries(userAnswers).forEach(([question, answer]) => {
+    const placeholder = findPlaceholderByValue(question);
+
+    // Skip small conditions and handled questions
+    if (
+      smallConditionsMap[question] ||
+      question === "Is the employee entitled to overtime work?" ||
+      question === "Would unused holidays would be paid for if employee is termination?" ||
+      question === "Would the Employee be entitled to Company Sick Pay?" ||
+      question === "What's the sick pay policy?"
+    ) {
+      return;
+    }
+
+    // Special handling for Job Title
+    if (question === "What's the name of the job title?") {
+      const jobTitleAnswer =
+        typeof answer === "string" && answer.trim() ? answer : "Job Title";
+      updatedText = updatedText.replace(
+        /<h2[^>]*>JOB TITLE AND DUTIES<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/,
+        (match, p1) => {
+          const updatedContent = p1.replace(
+            /Job Title/g,
+            `<span class="${
+              isDarkMode
+                ? "bg-teal-600/70 text-teal-100"
+                : "bg-teal-200/70 text-teal-900"
+            } px-1 rounded">${jobTitleAnswer}</span>`
+          );
+          return match.replace(p1, updatedContent);
+        }
+      );
+      return;
+    }
+
+    // Special handling for Job Title of the Authorized Representative
+    if (question === "What's the job title of the authorized representative?") {
+      const jobTitle =
+        typeof answer === "string" && answer.trim()
+          ? answer
+          : "Job Title of the authorized representative";
+      updatedText = updatedText.replace(
+        /Job Title of the authorized representative/g,
+        `<span class="${
+          isDarkMode
+            ? "bg-teal-600/70 text-teal-100"
+            : "bg-teal-200/70 text-teal-900"
+        } px-1 rounded">${jobTitle}</span>`
+      );
+      return;
+    }
+
+    // Special handling for Authorized Representative
+    if (question === "What's the name of the representative?") {
+      const repName =
+        typeof answer === "string" && answer.trim()
+          ? answer
+          : "Authorized Representative";
+      updatedText = updatedText.replace(
+        /Authorized Representative/g,
+        `<span class="${
+          isDarkMode
+            ? "bg-teal-600/70 text-teal-100"
+            : "bg-teal-200/70 text-teal-900"
+        } px-1 rounded">${repName}</span>`
+      );
+      return;
+    }
+
+    if (placeholder === "Unused Holiday Days" && typeof answer === "string") {
+      return;
+    }
+
+    if (placeholder) {
+      const escapedPlaceholder = placeholder.replace(
         /[.*+?^=!:${}()|\[\]\/\\]/g,
         "\\$&"
       );
-      if (answer === false || answer === null || answer === undefined) {
-        // Hide the small condition if answer is "No" (false), null, or undefined
+      if (question === "What's the annual salary?") {
+        const salaryData = answer as
+          | { amount: string; currency: string }
+          | undefined;
         updatedText = updatedText.replace(
-          new RegExp(escapedCondition, "gi"),
-          ""
-        );
-      } else if (answer === true) {
-        // Show the small condition if answer is "Yes" (true)
-        // Remove the curly braces and keep the content
-        let conditionContent = smallCondition
-          .replace(/^\{\//, "")
-          .replace(/\/\}$/, "");
-        // Handle cases where the condition starts with { and ends with } (without /)
-        conditionContent = conditionContent
-          .replace(/^\{/, "")
-          .replace(/\}$/, "");
-        updatedText = updatedText.replace(
-          new RegExp(escapedCondition, "gi"),
-          conditionContent
-        );
-      }
-    });
-
-    // Step 2: Hide probationary clause by default; only show if explicitly true
-    const probationAnswer =
-      userAnswers["Is the clause of probationary period applicable?"];
-    if (probationAnswer !== true) {
-      updatedText = updatedText.replace(
-        /<h2[^>]*>[^<]*PROBATIONARY PERIOD[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?(<span[^>]*>\(Optional Clause\)<\/span>)?\s*<\/p>/i,
-        ""
-      );
-    } else {
-      // Ensure the probationary period section remains if answer is true
-      const probationSectionMatch = updatedText.match(
-        /<h2[^>]*>[^<]*PROBATIONARY PERIOD[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?(<span[^>]*>\(Optional Clause\)<\/span>)?\s*<\/p>/i
-      );
-      if (!probationSectionMatch) {
-        // If the section was previously removed, we need to add it back
-        const originalSection = documentText.match(
-          /<h2[^>]*>[^<]*PROBATIONARY PERIOD[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?(<span[^>]*>\(Optional Clause\)<\/span>)?\s*<\/p>/i
-        );
-        if (originalSection) {
-          updatedText = updatedText.replace(
-            /(<h2[^>]*>[^<]*EMPLOYMENT AGREEMENT[^<]*<\/h2>)/i,
-            `$1\n${originalSection[0]}`
-          );
-        }
-      }
-    }
-
-    // Step 3: Hide pension clause by default; only show if explicitly true
-    const pensionAnswer = userAnswers["Is the Pension clause applicable?"];
-    if (pensionAnswer !== true) {
-      updatedText = updatedText.replace(
-        /<h2[^>]*>[^<]*PENSION[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?<\/p>/i,
-        ""
-      );
-    } else {
-      // Ensure the pension section remains if answer is true
-      const pensionSectionMatch = updatedText.match(
-        /<h2[^>]*>[^<]*PENSION[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?<\/p>/i
-      );
-      if (!pensionSectionMatch) {
-        const originalSection = documentText.match(
-          /<h2[^>]*>[^<]*PENSION[^<]*<\/h2>\s*<p[^>]*>[\s\S]*?<\/p>/i
-        );
-        if (originalSection) {
-          updatedText = updatedText.replace(
-            /(<h2[^>]*>[^<]*EMPLOYMENT AGREEMENT[^<]*<\/h2>)/i,
-            `$1\n${originalSection[0]}`
-          );
-        }
-      }
-    }
-
-    // Step 4: Handle additional locations formatting (already tied to the small condition above)
-    const additionalLocationsAnswer =
-      userAnswers[
-        "Does the employee need to work at additional locations besides the normal place of work?"
-      ];
-    if (additionalLocationsAnswer === true) {
-      const locationsAnswer = userAnswers[
-        "What is the additional work location?"
-      ] as string;
-      let formattedLocations = "";
-      if (locationsAnswer) {
-        const locationsArray = locationsAnswer
-          .split(/\s*,\s*|\s*and\s*|\s*, and\s*/)
-          .filter(Boolean);
-        if (locationsArray.length === 1) {
-          formattedLocations = locationsArray[0];
-        } else if (locationsArray.length === 2) {
-          formattedLocations = locationsArray.join(" and ");
-        } else {
-          formattedLocations = `${locationsArray
-            .slice(0, -1)
-            .join(", ")}, and ${locationsArray[locationsArray.length - 1]}`;
-        }
-      } else {
-        formattedLocations = "other locations";
-      }
-      updatedText = updatedText.replace(
-        /other locations/gi,
-        `<span class="${
-          isDarkMode
-            ? "bg-teal-600/70 text-teal-100"
+          new RegExp(`${escapedPlaceholder}`, "gi"),
+          `<span class="${
+            isDarkMode
+              ? "bg-teal-600/70 text-teal-100"
             : "bg-teal-200/70 text-teal-900"
-        } px-1 rounded">${formattedLocations}</span>`
-      );
-    }
-
-    // Step 5: Handle all placeholders
-    Object.entries(userAnswers).forEach(([question, answer]) => {
-      const placeholder = findPlaceholderByValue(question);
-
-      // Skip small conditions as they are already handled above
-      if (smallConditionsMap[question]) {
-        return;
-      }
-
-      // Special handling for Job Title to only replace the placeholder in content, not headings
-      if (question === "What's the name of the job title?") {
-        const jobTitleAnswer =
-          typeof answer === "string" && answer.trim() ? answer : "Job Title";
-        updatedText = updatedText.replace(
-          /<h2[^>]*>JOB TITLE AND DUTIES<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/,
-          (match, p1) => {
-            const updatedContent = p1.replace(
-              /Job Title/g,
-              `<span class="${
-                isDarkMode
-                  ? "bg-teal-600/70 text-teal-100"
-                  : "bg-teal-200/70 text-teal-900"
-              } px-1 rounded">${jobTitleAnswer}</span>`
-            );
-            return match.replace(p1, updatedContent);
-          }
+          } px-1 rounded">${salaryData?.amount || "Annual Salary"}</span>`
         );
-        return;
-      }
-
-      // Special handling for Job Title of the Authorized Representative
-      if (question === "What's the job title of the authorized representative?") {
-        const jobTitle =
-          typeof answer === "string" && answer.trim()
-            ? answer
-            : "Job Title of the authorized representative";
         updatedText = updatedText.replace(
-          /Job Title of the authorized representative/g,
+          new RegExp(`USD`, "gi"),
           `<span class="${
             isDarkMode
               ? "bg-teal-600/70 text-teal-100"
-              : "bg-teal-200/70 text-teal-900"
-          } px-1 rounded">${jobTitle}</span>`
+            : "bg-teal-200/70 text-teal-900"
+          } px-1 rounded">${salaryData?.currency || "USD"}</span>`
         );
-        return;
-      }
-
-      // Special handling for Authorized Representative
-      if (question === "What's the name of the representative?") {
-        const repName =
-          typeof answer === "string" && answer.trim()
-            ? answer
-            : "Authorized Representative";
+      } else if (question === "What is the governing country?") {
+        const countryAnswer =
+          typeof answer === "string" && answer.trim() ? answer : "USA";
         updatedText = updatedText.replace(
-          /Authorized Representative/g,
+          new RegExp(`USA`, "gi"),
           `<span class="${
             isDarkMode
               ? "bg-teal-600/70 text-teal-100"
-              : "bg-teal-200/70 text-teal-900"
-          } px-1 rounded">${repName}</span>`
+            : "bg-teal-200/70 text-teal-900"
+          } px-1 rounded">${countryAnswer}</span>`
         );
+      } else if (placeholder === "Job Title") {
         return;
-      }
-
-      if (question === "Is the employee entitled to overtime work?") {
-        const overtimeYesClause =
-          "The Employee is entitled to overtime pay for authorized overtime work.";
-        const overtimeNoClause =
-          "The Employee shall not receive additional payment for overtime worked.";
-
-        updatedText = updatedText.replace(
-          /<p className="mt-5" id="employment-agreement-working-hours">([\s\S]*?)<\/p>/i,
-          () => {
-            let replacementText = "";
-            if (answer === true) {
-              replacementText = `${overtimeYesClause}`;
-            } else if (answer === false) {
-              replacementText = `${overtimeNoClause}`;
-            }
-            return `<p className="mt-5" id="employment-agreement-working-hours">${replacementText}</p>`;
-          }
-        );
-        return;
-      }
-
-      if (placeholder === "Unused Holiday Days" && typeof answer === "string") {
-        const storedOperationType = localStorage.getItem("operationType");
-        const storedOperationValue = localStorage.getItem("operationValue");
-        const operationValue = storedOperationValue
-          ? parseFloat(storedOperationValue)
-          : null;
-        let calculatedValue: number | null = null;
-        const floatAnswer = parseFloat(answer).toFixed(2);
-        const numericAnswer = parseFloat(floatAnswer);
-        if (storedOperationType && operationValue !== null) {
-          switch (storedOperationType.toLowerCase()) {
-            case "add":
-              calculatedValue = numericAnswer + operationValue;
-              break;
-            case "subtract":
-              calculatedValue = numericAnswer - operationValue;
-              break;
-            case "multiply":
-              calculatedValue = numericAnswer * operationValue;
-              break;
-            case "divide":
-              calculatedValue =
-                operationValue !== 0 ? numericAnswer / operationValue : null;
-              break;
-            default:
-              calculatedValue = null;
-          }
-        }
-        localStorage.setItem(
-          "calculatedValue",
-          calculatedValue !== null ? String(calculatedValue) : "0"
-        );
-
-        updatedText = updatedText.replace(
-          new RegExp("Holiday Pay", "gi"),
-          `<span class="${
-            isDarkMode
-              ? "bg-teal-600/70 text-teal-100"
-              : "bg-teal-200/70 text-teal-900"
-          } px-1 rounded">${calculatedValue !== null ? calculatedValue : "Holiday Pay"}</span>`
-        );
-      }
-
-      if (placeholder) {
-        const escapedPlaceholder = placeholder.replace(
-          /[.*+?^=!:${}()|\[\]\/\\]/g,
-          "\\$&"
-        );
-        if (question === "What's the annual salary?") {
-          const salaryData = answer as
-            | { amount: string; currency: string }
-            | undefined;
+      } else if (typeof answer === "boolean" || answer === null) {
+        if (!answer && placeholder !== "other locations") {
+          updatedText = updatedText.replace(
+            new RegExp(`.*${escapedPlaceholder}.*`, "gi"),
+            ""
+          );
+        } else {
           updatedText = updatedText.replace(
             new RegExp(`${escapedPlaceholder}`, "gi"),
-            `<span class="${
-              isDarkMode
-                ? "bg-teal-600/70 text-teal-100"
-                : "bg-teal-200/70 text-teal-900"
-            } px-1 rounded">${salaryData?.amount || "Annual Salary"}</span>`
+            answer ? "Yes" : "No"
           );
-          updatedText = updatedText.replace(
-            new RegExp(`USD`, "gi"),
-            `<span class="${
-              isDarkMode
-                ? "bg-teal-600/70 text-teal-100"
-                : "bg-teal-200/70 text-teal-900"
-            } px-1 rounded">${salaryData?.currency || "USD"}</span>`
+        }
+      } else if (
+        typeof answer === "string" &&
+        answer.trim() &&
+        question !== "What is the additional work location?"
+      ) {
+        updatedText = updatedText.replace(
+          new RegExp(`${escapedPlaceholder}`, "gi"),
+          `<span class="${
+            isDarkMode
+              ? "bg-teal-600/70 text-teal-100"
+            : "bg-teal-200/70 text-teal-900"
+          } px-1 rounded">${answer}</span>`
+        );
+      } else if (question !== "What is the additional work location?") {
+        updatedText = updatedText.replace(
+          new RegExp(`${escapedPlaceholder}`, "gi"),
+          `${placeholder}`
+        );
+      }
+    } else {
+      if (question === "Is the termination clause applicable?") {
+        if (answer === false) {
+          const terminationSection = updatedText.match(
+            /<h2[^>]*>TERMINATION CLAUSE<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/i
           );
-        } else if (question === "What is the governing country?") {
-          const countryAnswer =
-            typeof answer === "string" && answer.trim() ? answer : "USA";
-          updatedText = updatedText.replace(
-            new RegExp(`USA`, "gi"),
-            `<span class="${
-              isDarkMode
-                ? "bg-teal-600/70 text-teal-100"
-                : "bg-teal-200/70 text-teal-900"
-            } px-1 rounded">${countryAnswer}</span>`
-          );
-        } else if (placeholder === "Job Title") {
-          return;
-        } else if (typeof answer === "boolean" || answer === null) {
-          if (!answer && placeholder !== "other locations") {
-            updatedText = updatedText.replace(
-              new RegExp(`.*${escapedPlaceholder}.*`, "gi"),
+          if (terminationSection) {
+            const sectionWithoutClause = terminationSection[0].replace(
+              /After the probationary period.*?gross misconduct\./,
               ""
             );
-          } else {
             updatedText = updatedText.replace(
-              new RegExp(`${escapedPlaceholder}`, "gi"),
-              answer ? "Yes" : "No"
+              terminationSection[0],
+              sectionWithoutClause
             );
           }
         } else if (
-          typeof answer === "string" &&
-          answer.trim() &&
-          question !== "What is the additional work location?"
+          answer === true &&
+          userAnswers["What's the notice period?"]
         ) {
           updatedText = updatedText.replace(
-            new RegExp(`${escapedPlaceholder}`, "gi"),
+            /Notice Period/gi,
             `<span class="${
               isDarkMode
                 ? "bg-teal-600/70 text-teal-100"
                 : "bg-teal-200/70 text-teal-900"
-            } px-1 rounded">${answer}</span>`
+            } px-1 rounded">${
+              userAnswers["What's the notice period?"] as string
+            }</span>`
           );
-        } else if (question !== "What is the additional work location?") {
-          updatedText = updatedText.replace(
-            new RegExp(`${escapedPlaceholder}`, "gi"),
-            `${placeholder}`
-          );
-        }
-      } else {
-        if (question === "Is the sick pay policy applicable?") {
-          const sickPayClause =
-            "The Employee may also be entitled to Company sick pay of Details of Company Sick Pay Policy";
-          if (answer === false) {
-            updatedText = updatedText.replace(sickPayClause, "");
-          } else if (
-            answer === true &&
-            userAnswers["What's the sick pay policy?"]
-          ) {
-            updatedText = updatedText.replace(
-              "Details of Company Sick Pay Policy",
-              `<span class="${
-                isDarkMode
-                  ? "bg-teal-600/70 text-teal-100"
-                  : "bg-teal-200/70 text-teal-900"
-              } px-1 rounded">${
-                userAnswers["What's the sick pay policy?"] as string
-              }</span>`
-            );
-          }
-        } else if (question === "Is the termination clause applicable?") {
-          if (answer === false) {
-            const terminationSection = updatedText.match(
-              /<h2[^>]*>TERMINATION CLAUSE<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/i
-            );
-            if (terminationSection) {
-              const sectionWithoutClause = terminationSection[0].replace(
-                /After the probationary period.*?gross misconduct\./,
-                ""
-              );
-              updatedText = updatedText.replace(
-                terminationSection[0],
-                sectionWithoutClause
-              );
-            }
-          } else if (
-            answer === true &&
-            userAnswers["What's the notice period?"]
-          ) {
-            updatedText = updatedText.replace(
-              /Notice Period/gi,
-              `<span class="${
-                isDarkMode
-                  ? "bg-teal-600/70 text-teal-100"
-                  : "bg-teal-200/70 text-teal-900"
-              } px-1 rounded">${
-                userAnswers["What's the notice period?"] as string
-              }</span>`
-            );
-          }
         }
       }
-    });
-
-    // Special handling for Employer Name
-    const employerNameAnswer = userAnswers["Employer Name"] as string;
-    if (employerNameAnswer && employerNameAnswer.trim()) {
-      updatedText = updatedText.replace(
-        /\[Employer Name\]/gi,
-        `<span class="${
-          isDarkMode
-            ? "bg-teal-600/70 text-teal-100"
-            : "bg-teal-200/70 text-teal-900"
-        } px-1 rounded">${employerNameAnswer}</span>`
-      );
     }
+  });
 
-    setAgreement(updatedText + " ");
-  }, [userAnswers, isDarkMode]);
+  // Special handling for Employer Name
+  const employerNameAnswer = userAnswers["Employer Name"] as string;
+  if (employerNameAnswer && employerNameAnswer.trim()) {
+    updatedText = updatedText.replace(
+      /\[Employer Name\]/gi,
+      `<span class="${
+        isDarkMode
+          ? "bg-teal-600/70 text-teal-100"
+          : "bg-teal-200/70 text-teal-900"
+      } px-1 rounded">${employerNameAnswer}</span>`
+    );
+  }
+
+  setAgreement(updatedText + " ");
+}, [userAnswers, isDarkMode]);
 
   const validateInput = (type: string, value: string): string => {
     if (!value) return "";
@@ -1313,7 +1385,8 @@ const Live_Generation = () => {
         !(
           typeof answer === "object" &&
           answer !== null &&
-          (!answer.amount || !answer.currency))
+          (!answer.amount || !answer.currency)
+        )
       ) {
         correctAnswers += 1;
       }
@@ -1358,8 +1431,8 @@ const Live_Generation = () => {
   };
 
   const selectedPart = localStorage.getItem("selectedPart");
-  const levelPath = selectedPart === "4" ? "/Level-Two-Part-Two-Demo" : "/Level-Two-Part-Two";
-  const { totalScore } = useScore();
+  const levelPath =
+    selectedPart === "4" ? "/Level-Two-Part-Two-Demo" : "/Level-Two-Part-Two";
 
   return (
     <div
@@ -1375,11 +1448,13 @@ const Live_Generation = () => {
         live_generation="/Live_Generation"
       />
       <div
-          className={`fixed top-14 right-2 p-2 rounded-lg shadow-md z-50 ${
-          isDarkMode ? "bg-gray-700/90 text-teal-300" : "bg-white/90 text-teal-700"
-          }`}
-          >
-          <p className="font-bold">Score: {totalScore}</p>
+        className={`fixed top-14 right-2 p-2 rounded-lg shadow-md z-50 ${
+          isDarkMode
+            ? "bg-gray-700/90 text-teal-300"
+            : "bg-white/90 text-teal-700"
+        }`}
+      >
+        <p className="font-bold">Score: {totalScore}</p>
       </div>
       <div className="fixed bottom-6 left-14 transform -translate-x-1/2 z-50 flex gap-4">
         <button
@@ -1504,7 +1579,5 @@ const Live_Generation = () => {
 };
 
 export default Live_Generation;
-
-
 
 // latest code
