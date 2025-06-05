@@ -135,7 +135,7 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
         newQuestionText = primaryValue;
       }
       setQuestionText(newQuestionText);
-      onQuestionTextChange(index, newQuestionText);
+      onQuestionTextChange(index, newQuestionText)
     }
     console.log(`Dropdown at index ${index} disabled after selecting type: ${type}`);
   };
