@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
-type ScoreContextType = {
+export type ScoreContextType = {
   totalScore: number;
   levelTwoScore: number;
   questionnaireScore: number;
@@ -106,3 +106,7 @@ export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const useScore = () => useContext(ScoreContext);
+
+
+
+// latest code

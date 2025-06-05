@@ -6,15 +6,57 @@ import { useQuestionType } from "../context/QuestionTypeContext";
 import { useHighlightedText } from "../context/HighlightedTextContext";
 import {
   useQuestionEditContext,
-  QuestionMaps,
-} from "../context/QuestionEditContext.tsx";
+} from "../context/QuestionEditContext";
 import { ThemeContext } from "../context/ThemeContext";
 import { useScore } from "../context/ScoreContext";
 import { useNavigate } from "react-router-dom";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { determineQuestionType } from "../utils/questionTypeUtils";
 import { useUserAnswers } from "../context/UserAnswersContext";
 
+// Define interfaces for contexts
+interface ThemeContextType {
+  isDarkMode: boolean;
+}
+
+interface ScoreContextType {
+  totalScore: number;
+  updateQuestionnaireScore: (points: number) => void;
+  resetAllScores: () => void;
+}
+
+interface HighlightedTextContextType {
+  highlightedTexts: string[];
+  setHighlightedTexts: React.Dispatch<React.SetStateAction<string[]>>;
+}
+
+interface QuestionTypeContextType {
+  selectedTypes: string[];
+  setSelectedTypes: React.Dispatch<React.SetStateAction<string[]>>;
+  setEditedQuestions: React.Dispatch<React.SetStateAction<string[]>>;
+  requiredQuestions: boolean[];
+  setRequiredQuestions: React.Dispatch<React.SetStateAction<boolean[]>>;
+}
+
+interface QuestionMaps {
+  textTypes: Record<string, string>;
+  numberTypes: Record<string, string>;
+  dateTypes: Record<string, string>;
+  radioTypes: Record<string, string>;
+}
+
+interface QuestionEditContextType {
+  findPlaceholderByValue: (value: string) => string | undefined;
+  updateQuestion: (typeKey: keyof QuestionMaps, placeholder: string, newText: string) => void;
+  determineQuestionType: (text: string) => { primaryType: string };
+  questionMaps: QuestionMaps;
+}
+
+interface UserAnswersContextType {
+  setUserAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}
+
+// Define interfaces for component props and state
 interface DivWithDropdownProps {
   textValue: string;
   index: number;
@@ -25,8 +67,20 @@ interface DivWithDropdownProps {
   initialQuestionText: string;
   initialType: string;
   initialRequired: boolean;
+  initialRequiredChanged: boolean;
   initialTypeChanged: boolean;
   isFollowUp?: boolean;
+}
+
+interface QuestionnaireState {
+  uniqueQuestions: string[];
+  questionOrder: number[];
+  questionTexts: string[];
+  selectedTypes: string[];
+  typeChangedStates: boolean[];
+  requiredQuestions: boolean[];
+  requiredChangedStates: boolean[];
+  scoredQuestions: Record<number, { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean }>;
 }
 
 const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
@@ -39,18 +93,20 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
   initialQuestionText,
   initialType,
   initialRequired = false,
+  initialRequiredChanged = false,
   initialTypeChanged = false,
   isFollowUp = false,
 }) => {
   const { isDarkMode } = useContext(ThemeContext);
   const { primaryValue, validTypes } = determineQuestionType(textValue);
   console.log(`DivWithDropdown for index ${index}: textValue="${textValue}", initialQuestionText="${initialQuestionText}", primaryValue="${primaryValue}"`);
-  
-  const [questionText, setQuestionText] = useState(initialQuestionText || "No text selected");
+
+  const [questionText, setQuestionText] = useState<string>(initialQuestionText || "No text selected");
   const [selectedType, setSelectedType] = useState<string>(initialType || "Text");
-  const [isOpen, setIsOpen] = useState(false);
-  const [isRequired, setIsRequired] = useState(initialRequired);
-  const [typeChanged, setTypeChanged] = useState(initialTypeChanged);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isRequired, setIsRequired] = useState<boolean>(initialRequired);
+  const [requiredChanged, setRequiredChanged] = useState<boolean>(initialRequiredChanged);
+  const [typeChanged, setTypeChanged] = useState<boolean>(initialTypeChanged);
   const {
     findPlaceholderByValue,
     updateQuestion,
@@ -93,25 +149,21 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
     const placeholder = findPlaceholderByValue(oldText);
 
     if (placeholder && primaryType !== "Unknown") {
-      const typeKey = (primaryType.toLowerCase() + "Types") as string;
+      const typeKey = primaryType.toLowerCase() + "Types" as keyof QuestionMaps;
 
-      if (
-        typeKey === "textTypes" ||
-        typeKey === "numberTypes" ||
-        typeKey === "dateTypes" ||
-        typeKey === "radioTypes"
-      ) {
-        updateQuestion(typeKey as keyof QuestionMaps, placeholder, newText);
-      }
+      updateQuestion(typeKey, placeholder, newText);
       console.log("Updated question map: ", questionMaps);
     }
   };
 
   const handleRequiredToggle = () => {
+    if (requiredChanged) return;
+
     const newRequired = !isRequired;
     setIsRequired(newRequired);
+    setRequiredChanged(true);
     onRequiredChange(index, newRequired);
-    console.log(`Required status for index ${index} set to: ${newRequired}`);
+    console.log(`Required status for index ${index} set to: ${newRequired}, toggle disabled`);
   };
 
   return (
@@ -229,8 +281,8 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
                   : isDarkMode
                   ? "bg-gray-600"
                   : "bg-gray-300"
-              }`}
-              onClick={handleRequiredToggle}
+              } ${requiredChanged ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              onClick={requiredChanged ? undefined : handleRequiredToggle}
             >
               <span
                 className={`absolute w-4 h-4 bg-white rounded-full transform transition-transform duration-300 ${
@@ -245,35 +297,35 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
   );
 };
 
-const Questionnaire = () => {
-  const { isDarkMode } = useContext(ThemeContext);
-  const { totalScore, updateQuestionnaireScore, resetAllScores } = useScore();
-  const [leftActive, setLeftActive] = useState(true);
-  const [rightActive, setRightActive] = useState(false);
-  const { highlightedTexts, setHighlightedTexts } = useHighlightedText();
+const Questionnaire: React.FC<{}> = () => {
+  const { isDarkMode } = useContext(ThemeContext) as ThemeContextType;
+  const { totalScore, updateQuestionnaireScore, resetAllScores } = useScore() as ScoreContextType;
+  const [leftActive, setLeftActive] = useState<boolean>(true);
+  const [rightActive, setRightActive] = useState<boolean>(false);
+  const { highlightedTexts, setHighlightedTexts } = useHighlightedText() as HighlightedTextContextType;
   const {
     selectedTypes,
     setSelectedTypes,
     setEditedQuestions,
     requiredQuestions,
     setRequiredQuestions,
-  } = useQuestionType();
+  } = useQuestionType() as QuestionTypeContextType;
   const [uniqueQuestions, setUniqueQuestions] = useState<string[]>([]);
   const [questionOrder, setQuestionOrder] = useState<number[]>([]);
   const [duplicateDetected, setDuplicateDetected] = useState<boolean>(false);
   const [questionTexts, setQuestionTexts] = useState<string[]>([]);
   const [scoredQuestions, setScoredQuestions] = useState<
-    Record<number, { typeScored: boolean; requiredScored: boolean }>
+    Record<number, { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean }>
   >({});
-  const [bonusAwarded, setBonusAwarded] = useState(false);
+  const [requiredChangedStates, setRequiredChangedStates] = useState<boolean[]>([]);
   const [scoreFeedback, setScoreFeedback] = useState<{
     points: number;
     id: number;
   } | null>(null);
   const [typeChangedStates, setTypeChangedStates] = useState<boolean[]>([]);
-  const feedbackId = useRef(0);
-  const { updateQuestion, findPlaceholderByValue } = useQuestionEditContext();
-  const { setUserAnswers } = useUserAnswers();
+  const feedbackId = useRef<number>(0);
+  const { updateQuestion, findPlaceholderByValue } = useQuestionEditContext() as QuestionEditContextType;
+  const { setUserAnswers } = useUserAnswers() as UserAnswersContextType;
   const navigate = useNavigate();
   const prevHighlightedTextsRef = useRef<string[]>([]);
 
@@ -322,91 +374,91 @@ const Questionnaire = () => {
       updateQuestionnaireScore(points);
       showFeedback(points);
 
-      setScoredQuestions((prev) => ({
-        ...prev,
-        [index]: {
-          ...prev[index],
-          typeScored: true,
-          typeCorrect: isCorrect,
-        },
-      }));
+      setScoredQuestions((prev) => {
+        const newScoredQuestions = {
+          ...prev,
+          [index]: {
+            ...prev[index],
+            typeScored: true,
+            typeCorrect: isCorrect,
+          },
+        };
+        localStorage.setItem("scoredQuestions", JSON.stringify(newScoredQuestions));
+        return newScoredQuestions;
+      });
       console.log(`Scored type selection for index ${index}: ${points} points`);
     },
-    [uniqueQuestions, enhancedDetermineQuestionType, scoredQuestions, updateQuestionnaireScore]
+    [uniqueQuestions, enhancedDetermineQuestionType, updateQuestionnaireScore]
   );
 
   const scoreRequiredStatus = useCallback(
     (index: number, isRequired: boolean) => {
+      if (scoredQuestions[index]?.requiredScored) return;
+
       if (isRequired) {
-        if (!scoredQuestions[index]?.requiredScored) {
-          updateQuestionnaireScore(2);
-          showFeedback(2);
-          setScoredQuestions((prev) => ({
+        updateQuestionnaireScore(10);
+        showFeedback(10);
+        setScoredQuestions((prev) => {
+          const newScoredQuestions = {
             ...prev,
             [index]: {
               ...prev[index],
               requiredScored: true,
               requiredCorrect: true,
             },
-          }));
-          console.log(
-            `Required status for "${uniqueQuestions[index]}" set to true, scored +2`
-          );
-        }
+          };
+          localStorage.setItem("scoredQuestions", JSON.stringify(newScoredQuestions));
+          return newScoredQuestions;
+        });
+        console.log(
+          `Required status for "${uniqueQuestions[index]}" set to true, scored +10`
+        );
       } else {
-        if (scoredQuestions[index]?.requiredScored) {
-          updateQuestionnaireScore(-2);
-          showFeedback(-2);
-          setScoredQuestions((prev) => ({
+        setScoredQuestions((prev) => {
+          const newScoredQuestions = {
             ...prev,
             [index]: {
               ...prev[index],
-              requiredScored: false,
+              requiredScored: true,
               requiredCorrect: false,
             },
-          }));
-          console.log(
-            `Required status for "${uniqueQuestions[index]}" set to false, scored -2`
-          );
-        }
+          };
+          localStorage.setItem("scoredQuestions", JSON.stringify(newScoredQuestions));
+          return newScoredQuestions;
+        });
+        console.log(
+          `Required status for "${uniqueQuestions[index]}" set to false, no score change`
+        );
       }
     },
-    [updateQuestionnaireScore, scoredQuestions, uniqueQuestions]
+    [updateQuestionnaireScore, uniqueQuestions]
   );
 
-  const checkForBonus = useCallback(() => {
-    if (uniqueQuestions.length === 0 || bonusAwarded) return;
-
-    const allCorrect = uniqueQuestions.every((text, index) => {
-      const { correctType } = enhancedDetermineQuestionType(text);
-      const selectedType = selectedTypes[index] ?? "Text";
-
-      const typeCorrect =
-        selectedType === correctType ||
-        (selectedType === "Text" && correctType === "Paragraph") ||
-        (selectedType === "Paragraph" && correctType === "Text");
-
-      const requiredCorrect = requiredQuestions[index];
-      return typeCorrect && requiredCorrect;
-    });
-
-    if (allCorrect) {
-      updateQuestionnaireScore(10);
-      showFeedback(10);
-      setBonusAwarded(true);
-      console.log(
-        "Bonus awarded: All question types and required statuses are correct. +10 points"
-      );
+  // Validate saved state integrity to prevent tampering
+  const validateSavedState = (savedState: any): boolean => {
+    if (!savedState || typeof savedState !== "object") return false;
+    for (const key in savedState) {
+      const entry = savedState[key];
+      if (
+        !entry ||
+        typeof entry.type !== "string" ||
+        typeof entry.typeChanged !== "boolean" ||
+        typeof entry.questionText !== "string" ||
+        typeof entry.required !== "boolean" ||
+        typeof entry.requiredChanged !== "boolean" ||
+        typeof entry.order !== "number" ||
+        !entry.scored ||
+        typeof entry.scored.typeScored !== "boolean" ||
+        typeof entry.scored.requiredScored !== "boolean"
+      ) {
+        console.warn(`Invalid saved state detected for key "${key}":`, entry);
+        return false;
+      }
     }
-  }, [
-    uniqueQuestions,
-    selectedTypes,
-    requiredQuestions,
-    enhancedDetermineQuestionType,
-    bonusAwarded,
-    updateQuestionnaireScore,
-  ]);
+    return true;
+  };
 
+  // Main useEffect for processing highlightedTexts
   useEffect(() => {
     const uniqueHighlightedTexts = [...new Set(highlightedTexts)];
     console.log("useEffect triggered with highlightedTexts:", uniqueHighlightedTexts);
@@ -426,7 +478,8 @@ const Questionnaire = () => {
       typeChanged: boolean;
       questionText: string;
       required: boolean;
-      scored: { typeScored: boolean; requiredScored: boolean };
+      requiredChanged: boolean;
+      scored: { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean };
       order: number;
     }> = {};
 
@@ -434,31 +487,33 @@ const Questionnaire = () => {
     if (savedStateData) {
       try {
         savedState = JSON.parse(savedStateData);
-        console.log("Loaded saved state from localStorage:", savedState);
+        if (!validateSavedState(savedState)) {
+          console.error("Saved state validation failed. Resetting state.");
+          localStorage.removeItem("questionnaireState");
+          localStorage.removeItem("scoredQuestions");
+          savedState = {};
+        } else {
+          console.log("Loaded and validated saved state from localStorage:", savedState);
+        }
       } catch (error) {
         console.error("Error parsing localStorage data:", error);
+        localStorage.removeItem("questionnaireState");
+        localStorage.removeItem("scoredQuestions");
+        savedState = {};
       }
     }
 
-    const processedTexts: string[] = [];
-    const questionMap = new Map();
-
     const isProbationaryClauseSelected = uniqueHighlightedTexts.some(
       (text) =>
-        text.toLowerCase().includes("probationary period") &&
-        text.includes("Probation Period Length") &&
-        text.length > "Probation Period Length".length
+        text ===
+        "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role."
     );
 
     const isAdditionalLocationsClauseSelected = uniqueHighlightedTexts.some(
       (text) =>
         text === "The Employee may be required to work at other locations." ||
-        text.includes(
-          "The Employee may be required to work at [other locations]."
-        ) ||
-        text.includes(
-          "/The Employee may be required to work at [other locations]./"
-        )
+        text.includes("The Employee may be required to work at [other locations].") ||
+        text.includes("/The Employee may be required to work at [other locations]./")
     );
 
     const filteredQuestions = uniqueHighlightedTexts.filter((text) => {
@@ -466,7 +521,7 @@ const Questionnaire = () => {
       const isFollowUp = followUpQuestions.includes(primaryValue || "");
 
       if (isProbationaryClauseSelected && text === "Probation Period Length") {
-        return false;
+        return true;
       }
 
       const isRadioQuestion = primaryType === "Radio" && primaryValue === text;
@@ -475,22 +530,18 @@ const Questionnaire = () => {
         isRadioQuestion ||
         text === "USA" ||
         text === "{/The Employee may be required to work at other locations./}" ||
-        text.includes(
-          "The Employee may be required to work at [other locations]."
-        ) ||
+        text.includes("The Employee may be required to work at [other locations].") ||
         (text === "other locations" && isAdditionalLocationsClauseSelected) ||
-        (primaryValue === "What's the probation period length?" &&
-          text === "Probation Period Length" &&
-          !isProbationaryClauseSelected) ||
         (!isFollowUp &&
           text !== "other locations" &&
-          !text.includes(
-            "The Employee may be required to work at [other locations]."
-          ) &&
+          !text.includes("The Employee may be required to work at [other locations].") &&
           text !== "{/The Employee may be required to work at other locations./}");
 
       return shouldInclude;
     });
+
+    const processedTexts: string[] = [];
+    const questionMap = new Map<string, string>();
 
     for (const text of filteredQuestions) {
       const { primaryValue } = enhancedDetermineQuestionType(text);
@@ -505,19 +556,17 @@ const Questionnaire = () => {
       }
     }
 
-    if (
-      uniqueHighlightedTexts.includes("USA") &&
-      !processedTexts.includes("USA")
-    ) {
+    if (uniqueHighlightedTexts.includes("USA") && !processedTexts.includes("USA")) {
       processedTexts.push("USA");
     }
 
     const orderedTexts: string[] = [];
-    const smallConditionText =
-      "{/The Employee may be required to work at other locations./}";
-    const smallConditionTextWithoutBrackets =
-      "The Employee may be required to work at [other locations].";
+    const smallConditionText = "{/The Employee may be required to work at other locations./}";
+    const smallConditionTextWithoutBrackets = "The Employee may be required to work at [other locations].";
     const followUpText = "other locations";
+    const probationClause =
+      "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
+    const probationFollowUp = "Probation Period Length";
 
     filteredQuestions.forEach((text) => {
       if (
@@ -528,13 +577,17 @@ const Questionnaire = () => {
         if (!orderedTexts.includes(text)) {
           orderedTexts.push(text);
         }
-        if (
-          uniqueHighlightedTexts.includes(followUpText) &&
-          !orderedTexts.includes(followUpText)
-        ) {
+        if (uniqueHighlightedTexts.includes(followUpText) && !orderedTexts.includes(followUpText)) {
           orderedTexts.push(followUpText);
         }
-      } else if (text !== followUpText && !orderedTexts.includes(text)) {
+      } else if (text === probationClause) {
+        if (!orderedTexts.includes(text)) {
+          orderedTexts.push(text);
+        }
+        if (uniqueHighlightedTexts.includes(probationFollowUp) && !orderedTexts.includes(probationFollowUp)) {
+          orderedTexts.push(probationFollowUp);
+        }
+      } else if (text !== followUpText && text !== probationFollowUp && !orderedTexts.includes(text)) {
         orderedTexts.push(text);
       }
     });
@@ -544,9 +597,10 @@ const Questionnaire = () => {
     const newSelectedTypes: string[] = [];
     const newTypeChangedStates: boolean[] = [];
     const newRequiredQuestions: boolean[] = [];
+    const newRequiredChangedStates: boolean[] = [];
     const newScoredQuestions: Record<
       number,
-      { typeScored: boolean; requiredScored: boolean }
+      { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean }
     > = {};
     const newQuestionOrder: number[] = [];
     const newState: Record<string, {
@@ -554,7 +608,8 @@ const Questionnaire = () => {
       typeChanged: boolean;
       questionText: string;
       required: boolean;
-      scored: { typeScored: boolean; requiredScored: boolean };
+      requiredChanged: boolean;
+      scored: { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean };
       order: number;
     }> = {};
 
@@ -568,8 +623,9 @@ const Questionnaire = () => {
       if (newIndex !== undefined) {
         newQuestionTexts[newIndex] = questionTexts[oldIndex] || "";
         newSelectedTypes[newIndex] = selectedTypes[oldIndex] ?? "Text";
-        newTypeChangedStates[newIndex] = typeChangedStates[oldIndex] || false;
+        newTypeChangedStates[newIndex] = typeChangedStates[oldIndex] ?? true;
         newRequiredQuestions[newIndex] = requiredQuestions[oldIndex] || false;
+        newRequiredChangedStates[newIndex] = requiredChangedStates[oldIndex] ?? true;
         newScoredQuestions[newIndex] = scoredQuestions[oldIndex] || {
           typeScored: false,
           requiredScored: false,
@@ -585,7 +641,7 @@ const Questionnaire = () => {
       const existing = existingIndex !== -1;
 
       const initialQuestionText = primaryValue || text;
-      const initialType = "Text";
+      const initialType = text === "Probation Period Length" ? "Number" : "Text";
 
       console.log(
         `Processing text "${text}": primaryType=${primaryType}, primaryValue=${primaryValue}, initialType=${initialType}, initialQuestionText=${initialQuestionText}`
@@ -593,21 +649,23 @@ const Questionnaire = () => {
 
       if (saved) {
         newQuestionTexts[i] = saved.questionText || initialQuestionText;
-        newSelectedTypes[i] = saved.type;
+        newSelectedTypes[i] = saved.type || initialType;
         newTypeChangedStates[i] = saved.typeChanged;
         newRequiredQuestions[i] = saved.required;
+        newRequiredChangedStates[i] = saved.requiredChanged;
         newScoredQuestions[i] = saved.scored;
         newQuestionOrder[i] = saved.order;
         newState[text] = {
-          type: saved.type,
+          type: saved.type || initialType,
           typeChanged: saved.typeChanged,
           questionText: saved.questionText || initialQuestionText,
           required: saved.required,
+          requiredChanged: saved.requiredChanged,
           scored: saved.scored,
           order: saved.order,
         };
         console.log(
-          `Restored saved state for question "${text}": type=${saved.type}, typeChanged=${saved.typeChanged}, questionText=${saved.questionText || initialQuestionText}`
+          `Restored saved state for question "${text}": type=${saved.type || initialType}, typeChanged=${saved.typeChanged}, questionText=${saved.questionText || initialQuestionText}, required=${saved.required}, requiredChanged=${saved.requiredChanged}`
         );
       } else if (existing) {
         newState[text] = {
@@ -615,6 +673,7 @@ const Questionnaire = () => {
           typeChanged: newTypeChangedStates[i],
           questionText: newQuestionTexts[i] || initialQuestionText,
           required: newRequiredQuestions[i],
+          requiredChanged: newRequiredChangedStates[i],
           scored: newScoredQuestions[i] || {
             typeScored: false,
             requiredScored: false,
@@ -622,25 +681,27 @@ const Questionnaire = () => {
           order: newQuestionOrder[i],
         };
         console.log(
-          `Preserved existing state for question "${text}": type=${newSelectedTypes[i]}, typeChanged=${newTypeChangedStates[i]}, questionText=${newQuestionTexts[i] || initialQuestionText}`
+          `Preserved existing state for question "${text}": type=${newSelectedTypes[i]}, typeChanged=${newTypeChangedStates[i]}, questionText=${newQuestionTexts[i] || initialQuestionText}, required=${newRequiredQuestions[i]}, requiredChanged=${newRequiredChangedStates[i]}`
         );
       } else {
-        newQuestionTexts[i] = initialQuestionText;
-        newSelectedTypes[i] = initialType;
-        newTypeChangedStates[i] = false;
-        newRequiredQuestions[i] = false;
-        newScoredQuestions[i] = { typeScored: false, requiredScored: false };
-        newQuestionOrder[i] = i;
+        newQuestionTexts[i] = newQuestionTexts[i] || initialQuestionText;
+        newSelectedTypes[i] = newSelectedTypes[i] || initialType;
+        newTypeChangedStates[i] = newTypeChangedStates[i] ?? false;
+        newRequiredQuestions[i] = newRequiredQuestions[i] || false;
+        newRequiredChangedStates[i] = newRequiredChangedStates[i] ?? false;
+        newScoredQuestions[i] = newScoredQuestions[i] || { typeScored: false, requiredScored: false };
+        newQuestionOrder[i] = newQuestionOrder[i] !== undefined ? newQuestionOrder[i] : i;
         newState[text] = {
           type: initialType,
           typeChanged: false,
           questionText: initialQuestionText,
           required: false,
+          requiredChanged: false,
           scored: { typeScored: false, requiredScored: false },
           order: i,
         };
         console.log(
-          `Initialized new question "${text}": type=${initialType}, typeChanged=false, questionText=${initialQuestionText}`
+          `Initialized new question "${text}": type=${initialType}, typeChanged=false, questionText=${initialQuestionText}, required=false, requiredChanged=false`
         );
       }
     });
@@ -650,18 +711,19 @@ const Questionnaire = () => {
     setSelectedTypes(newSelectedTypes);
     setTypeChangedStates(newTypeChangedStates);
     setRequiredQuestions(newRequiredQuestions);
+    setRequiredChangedStates(newRequiredChangedStates);
     setScoredQuestions(newScoredQuestions);
     setQuestionOrder(newQuestionOrder);
     setEditedQuestions(newQuestionTexts);
-    setBonusAwarded(false);
 
+    localStorage.setItem("questionnaireState", JSON.stringify(newState));
     console.log("Final uniqueQuestions:", newUniqueQuestions);
     console.log("Final selectedTypes:", newSelectedTypes);
     console.log("Final typeChangedStates:", newTypeChangedStates);
     console.log("Final questionTexts:", newQuestionTexts);
     console.log("Final questionOrder:", newQuestionOrder);
-
-    localStorage.setItem("questionnaireState", JSON.stringify(newState));
+    console.log("Final requiredQuestions:", newRequiredQuestions);
+    console.log("Final requiredChangedStates:", newRequiredChangedStates);
   }, [
     highlightedTexts,
     enhancedDetermineQuestionType,
@@ -673,28 +735,14 @@ const Questionnaire = () => {
     typeChangedStates,
     questionTexts,
     requiredQuestions,
-    scoredQuestions,
+    requiredChangedStates,
     questionOrder,
   ]);
-
-  useEffect(() => {
-    checkForBonus();
-  }, [checkForBonus]);
 
   const handleTypeChange = (index: number, type: string) => {
     const newTypes = [...selectedTypes];
     newTypes[index] = type;
     setSelectedTypes(newTypes);
-
-    const newState = {
-      ...JSON.parse(localStorage.getItem("questionnaireState") || "{}"),
-      [uniqueQuestions[index]]: {
-        ...JSON.parse(localStorage.getItem("questionnaireState") || "{}")[uniqueQuestions[index]],
-        type,
-        typeChanged: true,
-      },
-    };
-    localStorage.setItem("questionnaireState", JSON.stringify(newState));
     scoreTypeSelection(index, type);
 
     const textValue = uniqueQuestions[index];
@@ -716,12 +764,18 @@ const Questionnaire = () => {
       }
       setQuestionTexts(newTexts);
       setEditedQuestions(newTexts);
-      newState[uniqueQuestions[index]] = {
-        ...newState[uniqueQuestions[index]],
-        questionText: newTexts[index],
-      };
-      localStorage.setItem("questionnaireState", JSON.stringify(newState));
     }
+
+    const newState = {
+      ...JSON.parse(localStorage.getItem("questionnaireState") || "{}"),
+      [uniqueQuestions[index]]: {
+        ...JSON.parse(localStorage.getItem("questionnaireState") || "{}")[uniqueQuestions[index]],
+        type,
+        typeChanged: true,
+        questionText: newTexts[index],
+      },
+    };
+    localStorage.setItem("questionnaireState", JSON.stringify(newState));
     console.log(`Type changed for index ${index} to: ${type}`);
   };
 
@@ -760,20 +814,11 @@ const Questionnaire = () => {
     };
     localStorage.setItem("questionnaireState", JSON.stringify(newState));
 
-    const placeholder = findPlaceholderByValue(oldText) || "undefined";
-    const { primaryType } = enhancedDetermineQuestionType(placeholder);
-
+    const placeholder = findPlaceholderByValue(oldText);
     if (placeholder) {
-      const typeKey = (primaryType.toLowerCase() + "Types") as string;
-
-      if (
-        typeKey === "textTypes" ||
-        typeKey === "numberTypes" ||
-        typeKey === "dateTypes" ||
-        typeKey === "radioTypes"
-      ) {
-        updateQuestion(typeKey as keyof QuestionMaps, placeholder, newText);
-      }
+      const { primaryType } = enhancedDetermineQuestionType(placeholder);
+      const typeKey = primaryType.toLowerCase() + "Types" as keyof QuestionMaps;
+      updateQuestion(typeKey, placeholder, newText);
     }
     console.log(`Question text changed for index ${index} to: ${newText}`);
   };
@@ -783,11 +828,16 @@ const Questionnaire = () => {
     newRequired[index] = required;
     setRequiredQuestions(newRequired);
 
+    const newRequiredChanged = [...requiredChangedStates];
+    newRequiredChanged[index] = true;
+    setRequiredChangedStates(newRequiredChanged);
+
     const newState = {
       ...JSON.parse(localStorage.getItem("questionnaireState") || "{}"),
       [uniqueQuestions[index]]: {
         ...JSON.parse(localStorage.getItem("questionnaireState") || "{}")[uniqueQuestions[index]],
         required,
+        requiredChanged: true,
       },
     };
     localStorage.setItem("questionnaireState", JSON.stringify(newState));
@@ -795,7 +845,7 @@ const Questionnaire = () => {
     scoreRequiredStatus(index, required);
   };
 
-  const onDragEnd = (result: any) => {
+  const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
     const newOrder = [...questionOrder];
@@ -804,22 +854,22 @@ const Questionnaire = () => {
 
     setQuestionOrder(newOrder);
 
-    const newUniqueQuestions = newOrder.map((index) => uniqueQuestions[index]);
-    const newQuestionTexts = newOrder.map((index) => questionTexts[index]);
-    const newSelectedTypes = newOrder.map((index) => selectedTypes[index] ?? "Text");
+    const newUniqueQuestions = newOrder.map((index: number) => uniqueQuestions[index]);
+    const newQuestionTexts = newOrder.map((index: number) => questionTexts[index]);
+    const newSelectedTypes = newOrder.map((index: number) => selectedTypes[index] ?? "Text");
     const newRequiredQuestions = newOrder.map(
-      (index) => requiredQuestions[index]
+      (index: number) => requiredQuestions[index]
     );
     const newTypeChangedStates = newOrder.map(
-      (index) => typeChangedStates[index]
+      (index: number) => typeChangedStates[index]
+    );
+    const newRequiredChangedStates = newOrder.map(
+      (index: number) => requiredChangedStates[index]
     );
     const newScoredQuestions = Object.fromEntries(
-      newOrder.map((originalIndex, newIndex) => [
+      newOrder.map((originalIndex: number, newIndex: number) => [
         newIndex,
-        scoredQuestions[originalIndex] || {
-          typeScored: false,
-          requiredScored: false,
-        },
+        scoredQuestions[originalIndex] || { typeScored: false, requiredScored: false },
       ])
     );
 
@@ -828,6 +878,7 @@ const Questionnaire = () => {
     setSelectedTypes(newSelectedTypes);
     setRequiredQuestions(newRequiredQuestions);
     setTypeChangedStates(newTypeChangedStates);
+    setRequiredChangedStates(newRequiredChangedStates);
     setScoredQuestions(newScoredQuestions);
 
     const newState: Record<string, {
@@ -835,7 +886,8 @@ const Questionnaire = () => {
       typeChanged: boolean;
       questionText: string;
       required: boolean;
-      scored: { typeScored: boolean; requiredScored: boolean };
+      requiredChanged: boolean;
+      scored: { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean };
       order: number;
     }> = {};
     newUniqueQuestions.forEach((text, i) => {
@@ -845,6 +897,7 @@ const Questionnaire = () => {
         typeChanged: newTypeChangedStates[i],
         questionText: newQuestionTexts[i] || primaryValue || "No text selected",
         required: newRequiredQuestions[i],
+        requiredChanged: newRequiredChangedStates[i],
         scored: newScoredQuestions[i],
         order: newOrder[i],
       };
@@ -863,8 +916,8 @@ const Questionnaire = () => {
     setSelectedTypes([]);
     setTypeChangedStates([]);
     setRequiredQuestions([]);
+    setRequiredChangedStates([]);
     setScoredQuestions({});
-    setBonusAwarded(false);
 
     // Clear contexts
     setHighlightedTexts([]);
@@ -876,16 +929,16 @@ const Questionnaire = () => {
     // Reset scores
     resetAllScores();
 
-    // Clear storage, but preserve selectedPart
+    // Clear all relevant storage keys, preserving selectedPart
     localStorage.removeItem("questionnaireState");
+    localStorage.removeItem("scoredQuestions");
     sessionStorage.removeItem("selectedQuestionTypes");
     sessionStorage.removeItem("questionOrder_2");
     sessionStorage.removeItem("userAnswers");
     sessionStorage.removeItem("level");
     sessionStorage.removeItem("selectedQuestionTypes_2");
     sessionStorage.removeItem("typeChangedStates_2");
-    sessionStorage.removeItem("questionOrder_2");
-
+    sessionStorage.removeItem("levelTwoPartTwoState");
     console.log("All states, storage, and scores reset successfully, selectedPart preserved.");
   };
 
@@ -1019,7 +1072,7 @@ const Questionnaire = () => {
 
       {duplicateDetected && (
         <div
-          className={`absolute top-28 right-6 p-4 rounded-xl shadow-md transition-opacity duration-400 z-10 animate-fadeIn ${
+          className={`absolute top-28 right-6 p-4 rounded-xl shadow-md transition-opacity duration-400 z-1 animate-fadeIn ${
             isDarkMode
               ? "bg-gradient-to-r from-yellow-800 to-yellow-900 border-l-4 border-yellow-500 text-yellow-200"
               : "bg-gradient-to-r from-yellow-100 to-yellow-200 border-l-4 border-yellow-400 text-yellow-800"
@@ -1041,14 +1094,12 @@ const Questionnaire = () => {
                   <div {...provided.droppableProps} ref={provided.innerRef}>
                     {questionOrder.map((originalIndex, displayIndex) => {
                       const text = uniqueQuestions[originalIndex];
-                      const { primaryValue } =
-                        enhancedDetermineQuestionType(text);
+                      const { primaryValue } = enhancedDetermineQuestionType(text);
+                      const isFollowUpQuestion = text === "Probation Period Length";
                       return (
                         <Draggable
                           key={primaryValue || `question-${originalIndex}`}
-                          draggableId={
-                            primaryValue || `question-${originalIndex}`
-                          }
+                          draggableId={primaryValue || `question-${originalIndex}`}
                           index={displayIndex}
                         >
                           {(provided) => (
@@ -1067,15 +1118,11 @@ const Questionnaire = () => {
                                 initialQuestionText={
                                   questionTexts[originalIndex] || primaryValue || "No text selected"
                                 }
-                                initialType={
-                                  selectedTypes[originalIndex] ?? "Text"
-                                }
-                                initialRequired={
-                                  requiredQuestions[originalIndex] || false
-                                }
-                                initialTypeChanged={
-                                  typeChangedStates[originalIndex] || false
-                                }
+                                initialType={selectedTypes[originalIndex] ?? (text === "Probation Period Length" ? "Number" : "Text")}
+                                initialRequired={requiredQuestions[originalIndex] || false}
+                                initialRequiredChanged={requiredChangedStates[originalIndex] || false}
+                                initialTypeChanged={typeChangedStates[originalIndex] || false}
+                                isFollowUp={isFollowUpQuestion}
                               />
                             </div>
                           )}
@@ -1091,8 +1138,8 @@ const Questionnaire = () => {
             <div
               className={`text-center py-12 rounded-xl shadow-lg border ${
                 isDarkMode
-                  ? "bg-gray-800/80 backdrop-blur-sm border-gray-700/20"
-                  : "bg-white/80 backdrop-blur-sm border-teal-100/20"
+                ? "bg-gray-800/80 backdrop-blur-sm border-gray-600"
+                : "bg-white/80 backdrop-blur-sm border-teal-900"
               }`}
             >
               <p
@@ -1107,8 +1154,8 @@ const Questionnaire = () => {
                   isDarkMode ? "text-teal-400" : "text-teal-500"
                 }`}
               >
-                Go to the Document tab and select text in square brackets to
-                generate questions.
+                Go to the document tab and select text in square brackets to
+                generate your questions.
               </p>
             </div>
           )}
@@ -1119,6 +1166,3 @@ const Questionnaire = () => {
 };
 
 export default Questionnaire;
-
-
-// latest code

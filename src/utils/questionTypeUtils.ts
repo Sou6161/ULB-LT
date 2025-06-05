@@ -129,28 +129,26 @@ export const determineQuestionType = (text: string): {
   alternateType?: QuestionType, 
   alternateValue?: string 
 } => {
-  console.log("determineQuestionType called with text:", text);
-  console.log("text length:", text.length);
+  // console.log("determineQuestionType called with text:", text);
+  // console.log("text length:", text.length);
 
   let primaryType: QuestionType = "Unknown";
   let primaryValue: string = "";
-  let validTypes: QuestionType[] = ["Text", "Paragraph", "Email", "Number", "Date", "Radio"]; // Always include all types
+  let validTypes: QuestionType[] = ["Text", "Paragraph", "Email", "Number", "Date", "Radio"];
   let alternateType: QuestionType | undefined;
   let alternateValue: string | undefined;
 
-  // Normalize the input text by removing curly brackets, square brackets, extra spaces, and non-breaking spaces
   const normalizedText = text
-    .replace(/[{}[\]]/g, "") // Remove curly and square brackets
-    .replace(/\s+/g, " ") // Normalize multiple spaces to single space
-    .replace(/\u00A0/g, " ") // Replace non-breaking spaces with regular spaces
+    .replace(/[{}[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\u00A0/g, " ")
     .trim();
 
-  console.log("Original text:", text);
-  console.log("Normalized text for comparison:", normalizedText);
-  console.log("Normalized text length:", normalizedText.length);
-  console.log("Radio types keys:", Object.keys(radioTypes));
+  // console.log("Original text:", text);
+  // console.log("Normalized text for comparison:", normalizedText);
+  // console.log("Normalized text length:", normalizedText.length);
+  // console.log("Radio types keys:", Object.keys(radioTypes));
 
-  // Normalize the radioTypes keys for comparison
   const normalizedRadioTypes: { [key: string]: string } = {};
   Object.keys(radioTypes).forEach((key) => {
     const normalizedKey = key
@@ -159,41 +157,38 @@ export const determineQuestionType = (text: string): {
       .replace(/\u00A0/g, " ")
       .trim();
     normalizedRadioTypes[normalizedKey] = radioTypes[key];
-    console.log(`Normalized key: "${normalizedKey}", length: ${normalizedKey.length}, value: ${normalizedRadioTypes[normalizedKey]}`);
+    // console.log(`Normalized key: "${normalizedKey}", length: ${normalizedKey.length}, value: ${normalizedRadioTypes[normalizedKey]}`);
   });
 
-  console.log("Normalized radio types keys:", Object.keys(normalizedRadioTypes));
+  // console.log("Normalized radio types keys:", Object.keys(normalizedRadioTypes));
 
-  // Check if the input text is already a question from radioTypes values
   const radioQuestionMatch = Object.values(normalizedRadioTypes).find(
     (question) => question === normalizedText
   );
   if (radioQuestionMatch) {
     primaryType = "Radio";
-    primaryValue = radioQuestionMatch; // The question itself
-    console.log("Matched radio question:", radioQuestionMatch);
+    primaryValue = radioQuestionMatch;
+    // console.log("Matched radio question:", radioQuestionMatch);
   }
 
-  // Radio types (restrict to Radio only, including full clause)
   const fullProbationClause = "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
   const fullTerminationClause = "After the probationary period, either party may terminate the employment by providing [Notice Period] written notice. The Company reserves the right to make a payment in lieu of notice. The Company may summarily dismiss the Employee without notice in cases of gross misconduct.";
   const fullSickPayClause = "The Employee may also be entitled to Company sick pay of [Details of Company Sick Pay Policy]";
   const fullPensionClause = "The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.";
 
-  // Normalize the full clauses for comparison
   const normalizedFullProbationClause = fullProbationClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
   const normalizedFullTerminationClause = fullTerminationClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
   const normalizedFullSickPayClause = fullSickPayClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
   const normalizedFullPensionClause = fullPensionClause.replace(/[{}[\]]/g, "").replace(/\s+/g, " ").replace(/\u00A0/g, " ").trim();
 
-  console.log("Checking normalizedText against normalized radio types keys...");
-  console.log("normalizedText:", normalizedText);
-  console.log("normalizedFullPensionClause:", normalizedFullPensionClause);
-  console.log("Match with normalizedFullPensionClause:", normalizedText === normalizedFullPensionClause);
-  console.log("Has normalizedText in normalizedRadioTypes:", normalizedRadioTypes.hasOwnProperty(normalizedText));
+  // console.log("Checking normalizedText against normalized radio types keys...");
+  // console.log("normalizedText:", normalizedText);
+  // console.log("normalizedFullPensionClause:", normalizedFullPensionClause);
+  // console.log("Match with normalizedFullPensionClause:", normalizedText === normalizedFullPensionClause);
+  // console.log("Has normalizedText in normalizedRadioTypes:", normalizedRadioTypes.hasOwnProperty(normalizedText));
 
   if (
-    !radioQuestionMatch && // Skip if already matched as a radio question
+    !radioQuestionMatch &&
     (
       normalizedRadioTypes.hasOwnProperty(normalizedText) ||
       normalizedText === normalizedFullProbationClause ||
@@ -210,19 +205,17 @@ export const determineQuestionType = (text: string): {
       normalizedRadioTypes[fullTerminationClause] ||
       normalizedRadioTypes[fullPensionClause] ||
       "Is the clause applicable?";
-    console.log("Matched radio type with primaryValue:", primaryValue);
+    // console.log("Matched radio type with primaryValue:", primaryValue);
   } else {
-    console.log("No match found in normalizedRadioTypes for:", normalizedText);
+    // console.log("No match found in normalizedRadioTypes for:", normalizedText);
   }
 
-  // Text types
   if (textTypes.hasOwnProperty(normalizedText)) {
     primaryType = "Text";
     primaryValue = textTypes[normalizedText];
-    console.log("Matched text type with primaryValue:", primaryValue);
+    // console.log("Matched text type with primaryValue:", primaryValue);
   }
 
-  // Number types
   if (numberTypes.hasOwnProperty(normalizedText)) {
     if (primaryType === "Unknown") {
       primaryType = "Number";
@@ -231,7 +224,7 @@ export const determineQuestionType = (text: string): {
       alternateType = "Number";
       alternateValue = numberTypes[normalizedText];
     }
-    console.log("Matched number type with primaryValue:", primaryValue);
+    // console.log("Matched number type with primaryValue:", primaryValue);
   }
 
   if (dateTypes.hasOwnProperty(normalizedText)) {
@@ -242,11 +235,11 @@ export const determineQuestionType = (text: string): {
       alternateType = "Date";
       alternateValue = dateTypes[normalizedText];
     }
-    console.log("Matched date type with primaryValue:", primaryValue);
+    // console.log("Matched date type with primaryValue:", primaryValue);
   }
 
   if (primaryType === "Unknown" && primaryValue === "") {
-    console.log("No match found, returning Unknown type with all valid types");
+    // console.log("No match found, returning Unknown type with all valid types");
     return { primaryType: "Unknown", primaryValue: "", validTypes: ["Text", "Paragraph", "Email", "Number", "Date", "Radio"] };
   }
 

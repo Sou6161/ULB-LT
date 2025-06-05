@@ -1,7 +1,7 @@
 import { FaPenToSquare } from "react-icons/fa6";
 import { TbSettingsMinus, TbSettingsPlus } from "react-icons/tb";
 import { ImLoop2 } from "react-icons/im";
-import { useState, useContext, useEffect, useRef } from "react";
+import { useState, useContext, useEffect, useRef, JSX } from "react";
 import { useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { useHighlightedText } from "../context/HighlightedTextContext";
@@ -13,7 +13,20 @@ import AIAnalysisPanel from "../components/AIAnalysisPanel";
 import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
 
-const icons = [
+// Define icon type for clarity
+interface Icon {
+  icon: JSX.Element;
+  label: string;
+}
+
+// Interface for highlighted element state
+interface HighlightedElement {
+  text: string;
+  type: "placeholder";
+  bgColor: string;
+}
+
+const icons: Icon[] = [
   { icon: <FaPenToSquare />, label: "Edit PlaceHolder" },
   { icon: <TbSettingsMinus />, label: "Small Condition" },
   { icon: <TbSettingsPlus />, label: "Big Condition" },
@@ -27,6 +40,80 @@ const LevelTwoPart_Two_Demo = () => {
   const { highlightedTexts, addHighlightedText } = useHighlightedText();
   const { selectedTypes, setSelectedTypes } = useQuestionType();
   const documentRef = useRef<HTMLDivElement>(null);
+
+  // Restore highlighted elements
+  useEffect(() => {
+    const savedHighlights = sessionStorage.getItem("highlightedElements");
+    if (savedHighlights && documentRef.current) {
+      try {
+        const highlightedElements: HighlightedElement[] = JSON.parse(savedHighlights);
+        console.log("Restoring highlighted elements:", highlightedElements);
+        highlightedElements.forEach(({ text, type, bgColor }) => {
+          if (type === "placeholder") {
+            const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(`(${escapedText})`, "gi");
+            const walker = document.createTreeWalker(
+              documentRef.current!,
+              NodeFilter.SHOW_TEXT,
+              null
+            );
+            const textNodes: Text[] = [];
+            let node;
+            while ((node = walker.nextNode())) {
+              if (node.nodeType === Node.TEXT_NODE && node.textContent?.match(regex)) {
+                textNodes.push(node as Text);
+              }
+            }
+
+            console.log(`Found ${textNodes.length} text nodes for ${text}`);
+
+            textNodes.forEach((textNode) => {
+              const parent = textNode.parentElement;
+              if (parent && textNode.textContent) {
+                const parts = textNode.textContent.split(regex);
+                const fragment = document.createDocumentFragment();
+                parts.forEach((part, index) => {
+                  if (index % 2 === 1) {
+                    const span = document.createElement("span");
+                    span.style.backgroundColor = bgColor;
+                    span.textContent = part;
+                    fragment.appendChild(span);
+                  } else {
+                    fragment.appendChild(document.createTextNode(part));
+                  }
+                });
+                parent.replaceChild(fragment, textNode);
+              }
+            });
+          }
+        });
+      } catch (error) {
+        console.error("Error restoring highlighted elements:", error);
+      }
+    }
+  }, []); // Empty dependency array to run once on mount
+
+  // Save highlighted element to sessionStorage
+  const saveHighlightedElement = (
+    text: string,
+    type: "placeholder",
+    bgColor: string
+  ) => {
+    const savedHighlights = sessionStorage.getItem("highlightedElements");
+    let highlightedElements: HighlightedElement[] = [];
+    if (savedHighlights) {
+      try {
+        highlightedElements = JSON.parse(savedHighlights);
+      } catch (error) {
+        console.error("Error parsing highlighted elements:", error);
+      }
+    }
+    highlightedElements = highlightedElements.filter((el) => el.text !== text);
+    const newElement: HighlightedElement = { text, type, bgColor };
+    highlightedElements.push(newElement);
+    sessionStorage.setItem("highlightedElements", JSON.stringify(highlightedElements));
+    console.log("Saved highlighted element:", newElement);
+  };
 
   useEffect(() => {
     console.log("LevelTwoPart_Two_Demo - Rendering at:", location.pathname);
@@ -89,10 +176,6 @@ const LevelTwoPart_Two_Demo = () => {
     }
 
     if (label === "Edit PlaceHolder") {
-      // if (!(selectedText.startsWith("[") && selectedText.endsWith("]"))) {
-      //   console.log("Invalid Edit Placeholder selection:", selectedText);
-      //   return;
-      // }
       if (highlightedTexts.includes(textWithoutBrackets)) {
         console.log("Placeholder already highlighted:", textWithoutBrackets);
         alert("This placeholder has already been added!");
@@ -107,11 +190,13 @@ const LevelTwoPart_Two_Demo = () => {
       setSelectedTypes(newTypes);
       sessionStorage.setItem("selectedQuestionTypes", JSON.stringify(newTypes));
 
+      const bgColor = isDarkMode ? "rgba(255, 245, 157, 0.5)" : "rgba(255, 245, 157, 0.7)";
       const span = document.createElement("span");
-      span.style.backgroundColor = isDarkMode ? "rgba(255, 245, 157, 0.5)" : "rgba(255, 245, 157, 0.7)";
+      span.style.backgroundColor = bgColor;
       span.textContent = selectedText;
       range.deleteContents();
       range.insertNode(span);
+      saveHighlightedElement(selectedText, "placeholder", bgColor);
     } else if (label === "Small Condition") {
       if (!(selectedText.startsWith("{") && selectedText.endsWith("}")) || 
           selectedText.length < 35 || 
@@ -470,3 +555,6 @@ const LevelTwoPart_Two_Demo = () => {
 };
 
 export default LevelTwoPart_Two_Demo;
+
+
+// Sourabh code update for highlight placeholders in part 2 demo

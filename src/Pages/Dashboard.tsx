@@ -115,7 +115,6 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
   onSelectPart,
   isDarkMode,
 }) => {
-
   const { levelTwoScore } = useScore();
   if (!isOpen) return null;
 
@@ -126,10 +125,8 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
       onSelectPart("two-demo");
     } else {
       onSelectPart("two");
-
     }
   };
-
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
@@ -193,7 +190,6 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
 
             {/* Part Two [Demo] Button */}
             <button
-              // onClick={() => onSelectPart("two", true)}
               onClick={() => handlePartSelect(4)}
               className={`group relative flex items-center p-4 rounded-xl transition-all duration-300 ${
                 isDarkMode
@@ -220,7 +216,6 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
             {/* Part Two Button */}
             <div className="relative group">
               <button
-                // onClick={() => onSelectPart("two")}
                 className={`w-full group relative flex items-center p-4 rounded-xl transition-all duration-300 ${
                   isDarkMode
                     ? "bg-gradient-to-r from-green-900/50 to-lime-800/50 hover:from-green-800 hover:to-lime-700"
@@ -253,26 +248,27 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
                     Part 1: Automating Placeholders
                   </button>
                   <button 
-                  className={`w-full p-2 mb-2 rounded-lg ${
-                    levelTwoScore < 0   // change this to actual level 2 score for passing
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-lime-600 text-white hover:bg-lime-700"
-                  }`}
-                  onClick={() => levelTwoScore >= 0 && handlePartSelect(2)}>
+                    className={`w-full p-2 mb-2 rounded-lg ${
+                      levelTwoScore < 0   // change this to actual level 2 score for passing
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-lime-600 text-white hover:bg-lime-700"
+                    }`}
+                    onClick={() => levelTwoScore >= 0 && handlePartSelect(2)}
+                  >
                     Part 2: Automating Small Conditions
                   </button>
                   <button 
-                  className={`w-full p-2 mb-2 rounded-lg ${
-                    levelTwoScore < 0
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-lime-600 text-white hover:bg-lime-700"
-                  }`}
-                  onClick={() => levelTwoScore >= 0 && handlePartSelect(3)}>
+                    className={`w-full p-2 mb-2 rounded-lg ${
+                      levelTwoScore < 0
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-lime-600 text-white hover:bg-lime-700"
+                    }`}
+                    onClick={() => levelTwoScore >= 0 && handlePartSelect(3)}
+                  >
                     Part 3: Automating big Conditions
                   </button>
                 </div>
               </div>
-              
             </div>
           </div>
         </div>
@@ -311,24 +307,24 @@ const LevelCard: React.FC<LevelProps & { isDarkMode: boolean }> = ({
     }
   };
 
- const handleSelectPart = (part: string, isDemo?: boolean) => {
-  setShowDialog(false);
-  if (part === "one") {
-    navigate("/Level-Two-Part-One");
-  } else if (part === "two") {
-    navigate("/Level-Two-Part-Two", { 
-      state: { 
-        startTour: isDemo || false 
-      } 
-    });
-  } else {
-    navigate("/Level-Two-Part-Two-Demo", { 
-      state: { 
-        startTour: isDemo || false 
-      } 
-    });
-  }
-};
+  const handleSelectPart = (part: string, isDemo?: boolean) => {
+    setShowDialog(false);
+    if (part === "one") {
+      navigate("/Level-Two-Part-One");
+    } else if (part === "two") {
+      navigate("/Level-Two-Part-Two", { 
+        state: { 
+          startTour: isDemo || false 
+        } 
+      });
+    } else {
+      navigate("/Level-Two-Part-Two-Demo", { 
+        state: { 
+          startTour: isDemo || false 
+        } 
+      });
+    }
+  };
 
   return (
     <>
@@ -467,9 +463,11 @@ const Dashboard: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const levels = useMemo(() => levelsData, []);
 
-  // Clear session storage when the user navigates to the Dashboard
+  // Avoid clearing sessionStorage unnecessarily to preserve state for other components
   useEffect(() => {
-    sessionStorage.clear();
+    console.log("Navigated to Dashboard. Preserving questionnaireState in localStorage.");
+    // Optionally clear specific sessionStorage keys if necessary
+    // For example, clear only user answers or temporary states, but keep levelTwoPartTwoState
   }, []);
 
   // Load dark mode preference from localStorage

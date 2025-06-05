@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
-interface HighlightedTextContextType {
+export interface HighlightedTextContextType {
   highlightedTexts: string[];
   setHighlightedTexts: React.Dispatch<React.SetStateAction<string[]>>; // Add setHighlightedTexts
   addHighlightedText: (text: string) => void;

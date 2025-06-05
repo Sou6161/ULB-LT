@@ -12,6 +12,15 @@ import PerformanceStar_SubLevel_1Game from "../components/PerformanceStar_SubLev
 import CodeCircuit_SubLevel_3Game from "../components/CodeCircuit_SubLevel_3Game";
 import { useScore } from "../context/ScoreContext";
 
+interface QuestionnaireState {
+  uniqueQuestions: string[];
+  questionOrder: number[];
+  questionTexts: string[];
+  selectedTypes: string[];
+  requiredQuestions: boolean[];
+}
+
+
 // Warning Alert Component
 interface WarningAlertProps {
   message: string;
@@ -163,9 +172,32 @@ const Live_Generation = () => {
     sessionStorage.setItem("userAnswers", JSON.stringify(userAnswers));
   }, [userAnswers]);
 
-  useEffect(() => {
+ useEffect(() => {
+  let processedTexts: string[] = [];
+  let questionOrder: number[] = [];
+  let types: string[] = [];
+  let editedQuestions: string[] = [];
+  let requiredQuestions: boolean[] = [];
+
+  // Try to load from questionnaireState first
+  const savedState = sessionStorage.getItem("questionnaireState");
+  if (savedState) {
+    try {
+      const parsedState: QuestionnaireState = JSON.parse(savedState);
+      processedTexts = parsedState.uniqueQuestions || [];
+      questionOrder = parsedState.questionOrder || processedTexts.map((_, i) => i);
+      types = parsedState.selectedTypes || processedTexts.map(() => "Text");
+      editedQuestions = parsedState.questionTexts || processedTexts.map((text) => determineQuestionType(text).primaryValue || text);
+      requiredQuestions = parsedState.requiredQuestions || processedTexts.map(() => false);
+      console.log("Loaded from questionnaireState:", parsedState);
+    } catch (error) {
+      console.error("Error parsing questionnaireState:", error);
+    }
+  }
+
+  // Fallback to legacy sessionStorage keys or context
+  if (processedTexts.length === 0) {
     const savedOrder = sessionStorage.getItem("questionOrder_2");
-    let questionOrder: number[] = [];
     if (savedOrder) {
       questionOrder = JSON.parse(savedOrder);
     } else {
@@ -173,55 +205,54 @@ const Live_Generation = () => {
     }
 
     const savedTypes = sessionStorage.getItem("selectedQuestionTypes");
-    let types: string[] = [];
     if (savedTypes) {
       types = JSON.parse(savedTypes);
     } else {
       types = originalSelectedTypes.map((type) => type ?? "Text");
     }
 
-    const processedTexts = [...originalHighlightedTexts]; // Keep all placeholders
+    processedTexts = [...originalHighlightedTexts];
+    editedQuestions = originalEditedQuestions.length
+      ? originalEditedQuestions
+      : processedTexts.map((text) => determineQuestionType(text).primaryValue || text);
+    requiredQuestions = originalRequiredQuestions.length
+      ? originalRequiredQuestions
+      : processedTexts.map(() => false);
+    console.log("Loaded from legacy sessionStorage or context");
+  }
 
-    const reorderedHighlightedTexts = questionOrder
-      .map((index) => processedTexts[index])
-      .filter((text) => text !== undefined);
-    const reorderedSelectedTypes = questionOrder
-      .map((index) => types[index] ?? "Text")
-      .filter((type) => type !== undefined);
-    const reorderedEditedQuestions = questionOrder
-      .map(
-        (index) =>
-          originalEditedQuestions[index] ||
-          determineQuestionType(processedTexts[index]).primaryValue ||
-          "No text selected"
-      )
-      .filter((text) => text !== undefined);
-    const reorderedRequiredQuestions = questionOrder
-      .map((index) => originalRequiredQuestions[index] ?? false)
-      .filter((req) => req !== undefined);
+  // Reorder data based on questionOrder
+  const reorderedHighlightedTexts = questionOrder
+    .map((index) => processedTexts[index])
+    .filter((text): text is string => text !== undefined);
+  const reorderedSelectedTypes = questionOrder
+    .map((index) => types[index] ?? "Text")
+    .filter((type): type is string => type !== undefined);
+  const reorderedEditedQuestions = questionOrder
+    .map((index) => editedQuestions[index] || determineQuestionType(processedTexts[index] || "").primaryValue || "No text selected")
+    .filter((text): text is string => text !== undefined);
+  const reorderedRequiredQuestions = questionOrder
+    .map((index) => requiredQuestions[index] ?? false)
+    .filter((req): req is boolean => req !== undefined);
 
-    console.log("Reordered highlighted texts:", reorderedHighlightedTexts);
-    console.log("Reordered selected types:", reorderedSelectedTypes);
-    console.log("Reordered edited questions:", reorderedEditedQuestions);
-    console.log("Reordered required questions:", reorderedRequiredQuestions);
+  console.log("Reordered highlighted texts:", reorderedHighlightedTexts);
+  console.log("Reordered selected types:", reorderedSelectedTypes);
+  console.log("Reordered edited questions:", reorderedEditedQuestions);
+  console.log("Reordered required questions:", reorderedRequiredQuestions);
 
-    setHighlightedTexts(reorderedHighlightedTexts);
-    setLocalSelectedTypes(reorderedSelectedTypes);
-    setLocalEditedQuestions(reorderedEditedQuestions);
-    setLocalRequiredQuestions(reorderedRequiredQuestions);
+  setHighlightedTexts(reorderedHighlightedTexts);
+  setLocalSelectedTypes(reorderedSelectedTypes);
+  setLocalEditedQuestions(reorderedEditedQuestions);
+  setLocalRequiredQuestions(reorderedRequiredQuestions);
 
-    console.log(
-      "Processed placeholders:",
-      reorderedHighlightedTexts.length,
-      reorderedHighlightedTexts
-    );
-  }, [
-    originalHighlightedTexts,
-    originalSelectedTypes,
-    originalEditedQuestions,
-    originalRequiredQuestions,
-    determineQuestionType,
-  ]);
+  console.log("Processed placeholders:", reorderedHighlightedTexts.length, reorderedHighlightedTexts);
+}, [
+  originalHighlightedTexts,
+  originalSelectedTypes,
+  originalEditedQuestions,
+  originalRequiredQuestions,
+  determineQuestionType,
+]);
 
   // Map small conditions (enclosed in curly brackets) to their corresponding questions
   const smallConditionsMap: { [key: string]: string } = {
@@ -785,236 +816,150 @@ const Live_Generation = () => {
     setAdditionalLocations((prev) => [...prev, ""]);
   };
 
-  const renderAnswerInput = (index: number) => {
-    const question = editedQuestions[index] || "";
-    if (!question) return null;
+ const renderAnswerInput = (index: number) => {
+  const question = editedQuestions[index] || "";
+  if (!question) return null;
 
-    const currentType = selectedTypes[index] || "Text";
-    const answer =
-      userAnswers[question] !== undefined
-        ? userAnswers[question]
-        : currentType === "Radio"
-        ? null
-        : "";
-    const error = inputErrors[question] || "";
-    const isRequired = requiredQuestions[index] || false;
+  const currentType = selectedTypes[index] || "Text";
+  const answer =
+    userAnswers[question] !== undefined
+      ? userAnswers[question]
+      : currentType === "Radio"
+      ? null
+      : "";
+  const error = inputErrors[question] || "";
+  const isRequired = requiredQuestions[index] || false;
 
-    // Special handling for specific questions
-    if (
-      question ===
-      "Does the employee need to work at additional locations besides the normal place of work?"
-    ) {
-      return (
-        <div key={index} className="mb-12">
-          <p
-            className={`text-lg font-medium ${
-              isDarkMode ? "text-teal-200" : "text-teal-900"
+  // Special handling for specific questions
+  if (
+    question ===
+    "Does the employee need to work at additional locations besides the normal place of work?"
+  ) {
+    return (
+      <div key={index} className="mb-12">
+        <p
+          className={`text-lg font-medium ${
+            isDarkMode ? "text-teal-200" : "text-teal-900"
+          }`}
+        >
+          {question}
+          {isRequired && <span className="text-red-500 ml-2">*</span>}
+        </p>
+        <div className="mt-4 flex space-x-6">
+          <label
+            className={`flex items-center space-x-2 cursor-pointer ${
+              isDarkMode ? "text-teal-300" : "text-teal-700"
             }`}
           >
-            {question}
-            {isRequired && <span className="text-red-500 ml-2">*</span>}
-          </p>
-          <div className="mt-4 flex space-x-6">
-            <label
-              className={`flex items-center space-x-2 cursor-pointer ${
-                isDarkMode ? "text-teal-300" : "text-teal-700"
+            <input
+              type="radio"
+              name={`additional-locations-${index}`}
+              checked={answer === true}
+              onChange={() =>
+                handleAnswerChange(
+                  index,
+                  true,
+                  "What is the additional work location?"
+                )
+              }
+              className={`cursor-pointer ${
+                isDarkMode
+                  ? "text-teal-500 focus:ring-teal-400"
+                  : "text-teal-600 focus:ring-teal-500"
               }`}
-            >
-              <input
-                type="radio"
-                name={`additional-locations-${index}`}
-                checked={answer === true}
-                onChange={() =>
-                  handleAnswerChange(
-                    index,
-                    true,
-                    "What is the additional work location?"
-                  )
-                }
-                className={`cursor-pointer ${
-                  isDarkMode
-                    ? "text-teal-500 focus:ring-teal-400"
-                    : "text-teal-600 focus:ring-teal-500"
-                }`}
-                required={isRequired}
-              />
-              <span>Yes</span>
-            </label>
-            <label
-              className={`flex items-center space-x-2 cursor-pointer ${
-                isDarkMode ? "text-teal-300" : "text-teal-700"
+              required={isRequired}
+            />
+            <span>Yes</span>
+          </label>
+          <label
+            className={`flex items-center space-x-2 cursor-pointer ${
+              isDarkMode ? "text-teal-300" : "text-teal-700"
+            }`}
+          >
+            <input
+              type="radio"
+              name={`additional-locations-${index}`}
+              checked={answer === false}
+              onChange={() => handleAnswerChange(index, false)}
+              className={`cursor-pointer ${
+                isDarkMode
+                  ? "text-teal-500 focus:ring-teal-400"
+                  : "text-teal-600 focus:ring-teal-500"
               }`}
-            >
-              <input
-                type="radio"
-                name={`additional-locations-${index}`}
-                checked={answer === false}
-                onChange={() => handleAnswerChange(index, false)}
-                className={`cursor-pointer ${
-                  isDarkMode
-                    ? "text-teal-500 focus:ring-teal-400"
-                    : "text-teal-600 focus:ring-teal-500"
-                }`}
-                required={isRequired}
-              />
-              <span>No</span>
-            </label>
-          </div>
-          {answer === true &&
-            editedQuestions.some(
-              (q) => q === "What is the additional work location?"
-            ) && (
-              <div className="mt-6">
-                <p
-                  className={`text-lg font-medium ${
-                    isDarkMode ? "text-teal-200" : "text-teal-900"
-                  }`}
-                >
-                  What is the additional work location?
-                  {isRequired && <span className="text-red-500 ml-2">*</span>}
-                </p>
-                {additionalLocations.map((location, locIndex) => (
-                  <div key={locIndex} className="mt-4">
-                    <input
-                      type="text"
-                      value={location}
-                      onChange={(e) =>
-                        handleAnswerChange(
-                          editedQuestions.indexOf(
-                            "What is the additional work location?"
-                          ),
-                          e.target.value,
-                          undefined,
-                          true,
-                          locIndex
-                        )
-                      }
-                      className={`p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                        isDarkMode
-                          ? `bg-gray-700/80 border ${
-                              error ? "border-red-400" : "border-teal-600"
-                            } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
-                          : `bg-white/80 border ${
-                              error ? "border-red-400" : "border-teal-200"
-                            } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
-                      }`}
-                      placeholder={`Enter additional location ${locIndex + 1}`}
-                      required={isRequired}
-                    />
-                  </div>
-                ))}
-                <div className="flex justify-end mt-4">
-                  <button
-                    className={`px-6 py-3 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-300 ${
-                      isDarkMode
-                        ? "bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800"
-                        : "bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500"
-                    }`}
-                    onClick={handleAddMore}
-                  >
-                    Add More Locations
-                  </button>
-                </div>
-              </div>
-            )}
+              required={isRequired}
+            />
+            <span>No</span>
+          </label>
         </div>
-      );
-    }
-
-    if (question === "What's the annual salary?") {
-      const answerWithCurrency =
-        typeof answer === "object" &&
-        answer !== null &&
-        "amount" in answer &&
-        "currency" in answer
-          ? (answer as { amount: string; currency: string })
-          : { amount: "", currency: "USD" };
-
-      return (
-        <div key={index} className="mb-12">
-          <div className="w-full">
-            <p
-              className={`text-lg font-medium ${
-                isDarkMode ? "text-teal-200" : "text-teal-900"
-              }`}
-            >
-              {question}
-              {isRequired && <span className="text-red-500 ml-2">*</span>}
-            </p>
-            <div className="flex items-center space-x-4 mt-4">
-              <input
-                type="number"
-                value={answerWithCurrency.amount}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const error = validateInput("Number", value);
-                  setInputErrors((prev) => ({
-                    ...prev,
-                    [question]: error,
-                  }));
-                  const currentAnswer = userAnswers[question];
-                  const currentCurrency =
-                    typeof currentAnswer === "object" &&
-                    currentAnswer !== null &&
-                    "currency" in currentAnswer
-                      ? (currentAnswer as { amount: string; currency: string })
-                          .currency
-                      : "USD";
-                  handleAnswerChange(index, {
-                    amount: value,
-                    currency: currentCurrency,
-                  });
-                }}
-                ref={(el) => {
-                  if (el) inputRefs.current[index] = el;
-                }}
-                className={`p-3 w-1/2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  isDarkMode
-                    ? `bg-gray-700/80 border ${
-                        error ? "border-red-400" : "border-teal-600"
-                      } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
-                    : `bg-white/80 border ${
-                        error ? "border-red-400" : "border-teal-200"
-                      } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+        {answer === true &&
+          editedQuestions.some(
+            (q) => q === "What is the additional work location?"
+          ) && (
+            <div className="mt-6">
+              <p
+                className={`text-lg font-medium ${
+                  isDarkMode ? "text-teal-200" : "text-teal-900"
                 }`}
-                placeholder="Enter amount"
-                required={isRequired}
-              />
-              <select
-                value={answerWithCurrency.currency}
-                onChange={(e) => {
-                  handleAnswerChange(index, {
-                    amount: answerWithCurrency.amount,
-                    currency: e.target.value,
-                  });
-                }}
-                className={`p-3 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  isDarkMode
-                    ? "bg-gray-700/80 border border-teal-600 focus:ring-teal-400 text-teal-200"
-                    : "bg-white/80 border border-teal-200 focus:ring-teal-500 text-teal-800"
-                }`}
-                required={isRequired}
               >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="INR">INR</option>
-                <option value="SEK">SEK</option>
-                <option value="AUD">AUD</option>
-                <option value="JPY">JPY</option>
-                <option value="CAD">CAD</option>
-                <option value="CHF">CHF</option>
-              </select>
+                What is the additional work location?
+                {isRequired && <span className="text-red-500 ml-2">*</span>}
+              </p>
+              {additionalLocations.map((location, locIndex) => (
+                <div key={locIndex} className="mt-4">
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) =>
+                      handleAnswerChange(
+                        editedQuestions.indexOf(
+                          "What is the additional work location?"
+                        ),
+                        e.target.value,
+                        undefined,
+                        true,
+                        locIndex
+                      )
+                    }
+                    className={`p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                      isDarkMode
+                        ? `bg-gray-700/80 border ${
+                            error ? "border-red-400" : "border-teal-600"
+                          } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
+                        : `bg-white/80 border ${
+                            error ? "border-red-400" : "border-teal-200"
+                          } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+                    }`}
+                    placeholder={`Enter additional location ${locIndex + 1}`}
+                    required={isRequired}
+                  />
+                </div>
+              ))}
+              <div className="flex justify-end mt-4">
+                <button
+                  className={`px-6 py-3 text-white rounded-lg shadow-md transform hover:scale-105 transition-all duration-300 ${
+                    isDarkMode
+                      ? "bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800"
+                      : "bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500"
+                  }`}
+                  onClick={handleAddMore}
+                >
+                  Add More Locations
+                </button>
+              </div>
             </div>
-            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-          </div>
-        </div>
-      );
-    }
+          )}
+      </div>
+    );
+  }
 
-    if (question === "What is the additional work location?") {
-      return null; // Handled within the parent radio question
-    }
+  if (question === "What's the annual salary?") {
+    const answerWithCurrency =
+      typeof answer === "object" &&
+      answer !== null &&
+      "amount" in answer &&
+      "currency" in answer
+        ? (answer as { amount: string; currency: string })
+        : { amount: "", currency: "USD" };
 
     return (
       <div key={index} className="mb-12">
@@ -1027,149 +972,197 @@ const Live_Generation = () => {
             {question}
             {isRequired && <span className="text-red-500 ml-2">*</span>}
           </p>
-          {currentType === "Radio" ? (
-            question === "Is the sick pay policy applicable?" ? (
-              <>
-                <div className="mt-4 flex space-x-6">
-                  <label
-                    className={`flex items-center space-x-2 cursor-pointer ${
-                      isDarkMode ? "text-teal-300" : "text-teal-700"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`sick-pay-${index}`}
-                      checked={answer === true}
-                      onChange={() =>
-                        handleAnswerChange(
-                          index,
-                          true,
-                          "What's the sick pay policy?"
-                        )
-                      }
-                      className={`cursor-pointer ${
-                        isDarkMode
-                          ? "text-teal-500 focus:ring-teal-400"
-                          : "text-teal-600 focus:ring-teal-500"
-                      }`}
-                      required={isRequired}
-                    />
-                    <span>Yes</span>
-                  </label>
-                  <label
-                    className={`flex items-center space-x-2 cursor-pointer ${
-                      isDarkMode ? "text-teal-300" : "text-teal-700"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`sick-pay-${index}`}
-                      checked={answer === false}
-                      onChange={() => handleAnswerChange(index, false)}
-                      className={`cursor-pointer ${
-                        isDarkMode
-                          ? "text-teal-500 focus:ring-teal-400"
-                          : "text-teal-600 focus:ring-teal-500"
-                      }`}
-                      required={isRequired}
-                    />
-                    <span>No</span>
-                  </label>
-                </div>
-                {answer === true && (
-                  <input
-                    type="text"
-                    value={
-                      (userAnswers["What's the sick pay policy?"] as string) ||
-                      ""
-                    }
-                    onChange={(e) =>
-                      setUserAnswers((prev) => ({
-                        ...prev,
-                        "What's the sick pay policy?": e.target.value,
-                      }))
-                    }
-                    className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                      isDarkMode
-                        ? "bg-gray-700/80 border border-teal-600 focus:ring-teal-400 text-teal-200 placeholder-teal-300/70"
-                        : "bg-white/80 border border-teal-200 focus:ring-teal-500 text-teal-800 placeholder-teal-400/70"
-                    }`}
-                    placeholder="What's the sick pay policy?"
-                    required={isRequired}
-                  />
-                )}
-              </>
-            ) : question === "Is the termination clause applicable?" ? (
-              <>
-                <div className="mt-4 flex space-x-6">
-                  <label
-                    className={`flex items-center space-x-2 cursor-pointer ${
-                      isDarkMode ? "text-teal-300" : "text-teal-700"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`termination-${index}`}
-                      checked={answer === true}
-                      onChange={() =>
-                        handleAnswerChange(
-                          index,
-                          true,
-                          "What's the notice period?"
-                        )
-                      }
-                      className={`cursor-pointer ${
-                        isDarkMode
-                          ? "text-teal-500 focus:ring-teal-400"
-                          : "text-teal-600 focus:ring-teal-500"
-                      }`}
-                      required={isRequired}
-                    />
-                    <span>Yes</span>
-                  </label>
-                  <label
-                    className={`flex items-center space-x-2 cursor-pointer ${
-                      isDarkMode ? "text-teal-300" : "text-teal-700"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`termination-${index}`}
-                      checked={answer === false}
-                      onChange={() => handleAnswerChange(index, false)}
-                      className={`cursor-pointer ${
-                        isDarkMode
-                          ? "text-teal-500 focus:ring-teal-400"
-                          : "text-teal-600 focus:ring-teal-500"
-                      }`}
-                      required={isRequired}
-                    />
-                    <span>No</span>
-                  </label>
-                </div>
-                {answer === true && (
-                  <input
-                    type="text"
-                    value={
-                      (userAnswers["What's the notice period?"] as string) || ""
-                    }
-                    onChange={(e) =>
-                      setUserAnswers((prev) => ({
-                        ...prev,
-                        "What's the notice period?": e.target.value,
-                      }))
-                    }
-                    className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                      isDarkMode
-                        ? "bg-gray-700/80 border border-teal-600 focus:ring-teal-400 text-teal-200 placeholder-teal-300/70"
-                        : "bg-white/80 border border-teal-200 focus:ring-teal-500 text-teal-800 placeholder-teal-400/70"
-                    }`}
-                    placeholder="What's the notice period?"
-                    required={isRequired}
-                  />
-                )}
-              </>
-            ) : (
+          <div className="flex items-center space-x-4 mt-4">
+            <input
+              type="number"
+              value={answerWithCurrency.amount}
+              onChange={(e) => {
+                const value = e.target.value;
+                const error = validateInput("Number", value);
+                setInputErrors((prev) => ({
+                  ...prev,
+                  [question]: error,
+                }));
+                const currentAnswer = userAnswers[question];
+                const currentCurrency =
+                  typeof currentAnswer === "object" &&
+                  currentAnswer !== null &&
+                  "currency" in currentAnswer
+                    ? (currentAnswer as { amount: string; currency: string })
+                        .currency
+                    : "USD";
+                handleAnswerChange(index, {
+                  amount: value,
+                  currency: currentCurrency,
+                });
+              }}
+              ref={(el) => {
+                if (el) inputRefs.current[index] = el;
+              }}
+              className={`p-3 w-1/2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isDarkMode
+                  ? `bg-gray-700/80 border ${
+                      error ? "border-red-400" : "border-teal-600"
+                    } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
+                  : `bg-white/80 border ${
+                      error ? "border-red-400" : "border-teal-200"
+                    } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+              }`}
+              placeholder="Enter amount"
+              required={isRequired}
+            />
+            <select
+              value={answerWithCurrency.currency}
+              onChange={(e) => {
+                handleAnswerChange(index, {
+                  amount: answerWithCurrency.amount,
+                  currency: e.target.value,
+                });
+              }}
+              className={`p-3 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isDarkMode
+                  ? "bg-gray-700/80 border border-teal-600 focus:ring-teal-400 text-teal-200"
+                  : "bg-white/80 border border-teal-200 focus:ring-teal-500 text-teal-800"
+              }`}
+              required={isRequired}
+            >
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="INR">INR</option>
+              <option value="SEK">SEK</option>
+              <option value="AUD">AUD</option>
+              <option value="JPY">JPY</option>
+              <option value="CAD">CAD</option>
+              <option value="CHF">CHF</option>
+            </select>
+          </div>
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  if (question === "What is the additional work location?") {
+    return null; // Handled within the parent radio question
+  }
+
+  // Handle the probationary period question with its follow-up
+  if (question === "Is the clause of probationary period applicable?") {
+    return (
+      <div key={index} className="mb-12">
+        <p
+          className={`text-lg font-medium ${
+            isDarkMode ? "text-teal-200" : "text-teal-900"
+          }`}
+        >
+          {question}
+          {isRequired && <span className="text-red-500 ml-2">*</span>}
+        </p>
+        <div className="mt-4 flex space-x-6">
+          <label
+            className={`flex items-center space-x-2 cursor-pointer ${
+              isDarkMode ? "text-teal-300" : "text-teal-700"
+            }`}
+          >
+            <input
+              type="radio"
+              name={`probation-${index}`}
+              checked={answer === true}
+              onChange={() =>
+                handleAnswerChange(
+                  index,
+                  true,
+                  "What's the probation period length?"
+                )
+              }
+              className={`cursor-pointer ${
+                isDarkMode
+                  ? "text-teal-500 focus:ring-teal-400"
+                  : "text-teal-600 focus:ring-teal-500"
+              }`}
+              required={isRequired}
+            />
+            <span>Yes</span>
+          </label>
+          <label
+            className={`flex items-center space-x-2 cursor-pointer ${
+              isDarkMode ? "text-teal-300" : "text-teal-700"
+            }`}
+          >
+            <input
+              type="radio"
+              name={`probation-${index}`}
+              checked={answer === false}
+              onChange={() => handleAnswerChange(index, false)}
+              className={`cursor-pointer ${
+                isDarkMode
+                  ? "text-teal-500 focus:ring-teal-400"
+                  : "text-teal-600 focus:ring-teal-500"
+              }`}
+              required={isRequired}
+            />
+            <span>No</span>
+          </label>
+        </div>
+        {answer === true &&
+          editedQuestions.some(
+            (q) => q === "What's the probation period length?"
+          ) && (
+            <div className="mt-6">
+              <p
+                className={`text-lg font-medium ${
+                  isDarkMode ? "text-teal-200" : "text-teal-900"
+                }`}
+              >
+                What's the probation period length?
+                {isRequired && <span className="text-red-500 ml-2">*</span>}
+              </p>
+              <input
+                type="text"
+                value={
+                  (userAnswers["What's the probation period length?"] as string) ||
+                  ""
+                }
+                onChange={(e) =>
+                  setUserAnswers((prev) => ({
+                    ...prev,
+                    "What's the probation period length?": e.target.value,
+                  }))
+                }
+                className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                  isDarkMode
+                    ? "bg-gray-700/80 border border-teal-600 focus:ring-teal-400 text-teal-200 placeholder-teal-300/70"
+                    : "bg-white/80 border border-teal-200 focus:ring-teal-500 text-teal-800 placeholder-teal-400/70"
+                }`}
+                placeholder="Enter the probation period length"
+                required={isRequired}
+              />
+            </div>
+          )}
+      </div>
+    );
+  }
+
+  // Skip rendering the follow-up question here as it's handled above
+  if (question === "What's the probation period length?") {
+    return null;
+  }
+
+  return (
+    <div key={index} className="mb-12">
+      <div className="w-full">
+        <p
+          className={`text-lg font-medium ${
+            isDarkMode ? "text-teal-200" : "text-teal-900"
+          }`}
+        >
+          {question}
+          {isRequired && <span className="text-red-500 ml-2">*</span>}
+        </p>
+        {currentType === "Radio" ? (
+          question === "Is the sick pay policy applicable?" ? (
+            <>
               <div className="mt-4 flex space-x-6">
                 <label
                   className={`flex items-center space-x-2 cursor-pointer ${
@@ -1178,9 +1171,15 @@ const Live_Generation = () => {
                 >
                   <input
                     type="radio"
-                    name={`radio-${index}`}
+                    name={`sick-pay-${index}`}
                     checked={answer === true}
-                    onChange={() => handleAnswerChange(index, true)}
+                    onChange={() =>
+                      handleAnswerChange(
+                        index,
+                        true,
+                        "What's the sick pay policy?"
+                      )
+                    }
                     className={`cursor-pointer ${
                       isDarkMode
                         ? "text-teal-500 focus:ring-teal-400"
@@ -1197,7 +1196,7 @@ const Live_Generation = () => {
                 >
                   <input
                     type="radio"
-                    name={`radio-${index}`}
+                    name={`sick-pay-${index}`}
                     checked={answer === false}
                     onChange={() => handleAnswerChange(index, false)}
                     className={`cursor-pointer ${
@@ -1210,127 +1209,260 @@ const Live_Generation = () => {
                   <span>No</span>
                 </label>
               </div>
-            )
-          ) : currentType === "Number" ? (
-            <>
-              <input
-                ref={(el) => {
-                  if (el) inputRefs.current[index] = el as HTMLInputElement;
-                }}
-                type="number"
-                value={(userAnswers[question] as string) || ""}
-                onChange={(e) => handleAnswerChange(index, e.target.value)}
-                className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  isDarkMode
-                    ? `bg-gray-700/80 border ${
-                        error ? "border-red-400" : "border-teal-600"
-                      } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
-                    : `bg-white/80 border ${
-                        error ? "border-red-400" : "border-teal-200"
-                      } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
-                }`}
-                placeholder="Enter a number"
-                required={isRequired}
-              />
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+              {answer === true && (
+                <input
+                  type="text"
+                  value={
+                    (userAnswers["What's the sick pay policy?"] as string) || ""
+                  }
+                  onChange={(e) =>
+                    setUserAnswers((prev) => ({
+                      ...prev,
+                      "What's the sick pay policy?": e.target.value,
+                    }))
+                  }
+                  className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                    isDarkMode
+                      ? "bg-gray-700/80 border border-teal-600 focus:ring-teal-400 text-teal-200 placeholder-teal-300/70"
+                      : "bg-white/80 border border-teal-200 focus:ring-teal-500 text-teal-800 placeholder-teal-400/70"
+                  }`}
+                  placeholder="What's the sick pay policy?"
+                  required={isRequired}
+                />
+              )}
             </>
-          ) : currentType === "Date" ? (
+          ) : question === "Is the termination clause applicable?" ? (
             <>
-              <input
-                ref={(el) => {
-                  if (el) inputRefs.current[index] = el as HTMLInputElement;
-                }}
-                type="date"
-                value={(userAnswers[question] as string) || ""}
-                onChange={(e) => handleAnswerChange(index, e.target.value)}
-                className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  isDarkMode
-                    ? `bg-gray-700/80 border ${
-                        error ? "border-red-400" : "border-teal-600"
-                      } focus:ring-teal-400 text-teal-200`
-                    : `bg-white/80 border ${
-                        error ? "border-red-400" : "border-teal-200"
-                      } focus:ring-teal-500 text-teal-800`
-                }`}
-                placeholder="Select a date"
-                required={isRequired}
-              />
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-            </>
-          ) : currentType === "Email" ? (
-            <>
-              <input
-                ref={(el) => {
-                  if (el) inputRefs.current[index] = el as HTMLInputElement;
-                }}
-                type="email"
-                value={(userAnswers[question] as string) || ""}
-                onChange={(e) => handleAnswerChange(index, e.target.value)}
-                className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  isDarkMode
-                    ? `bg-gray-700/80 border ${
-                        error ? "border-red-400" : "border-teal-600"
-                      } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
-                    : `bg-white/80 border ${
-                        error ? "border-red-400" : "border-teal-200"
-                      } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
-                }`}
-                placeholder="Enter an email address"
-                required={isRequired}
-              />
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-            </>
-          ) : currentType === "Paragraph" ? (
-            <>
-              <textarea
-                ref={(el) => {
-                  if (el) inputRefs.current[index] = el as HTMLTextAreaElement;
-                }}
-                value={(userAnswers[question] as string) || ""}
-                onChange={(e) => handleAnswerChange(index, e.target.value)}
-                className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  isDarkMode
-                    ? `bg-gray-700/80 border ${
-                        error ? "border-red-400" : "border-teal-600"
-                      } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
-                    : `bg-white/80 border ${
-                        error ? "border-red-400" : "border-teal-200"
-                      } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
-                }`}
-                placeholder="Enter your answer"
-                rows={3}
-                required={isRequired}
-              />
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+              <div className="mt-4 flex space-x-6">
+                <label
+                  className={`flex items-center space-x-2 cursor-pointer ${
+                    isDarkMode ? "text-teal-300" : "text-teal-700"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`termination-${index}`}
+                    checked={answer === true}
+                    onChange={() =>
+                      handleAnswerChange(
+                        index,
+                        true,
+                        "What's the notice period?"
+                      )
+                    }
+                    className={`cursor-pointer ${
+                      isDarkMode
+                        ? "text-teal-500 focus:ring-teal-400"
+                        : "text-teal-600 focus:ring-teal-500"
+                    }`}
+                    required={isRequired}
+                  />
+                  <span>Yes</span>
+                </label>
+                <label
+                  className={`flex items-center space-x-2 cursor-pointer ${
+                    isDarkMode ? "text-teal-300" : "text-teal-700"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`termination-${index}`}
+                    checked={answer === false}
+                    onChange={() => handleAnswerChange(index, false)}
+                    className={`cursor-pointer ${
+                      isDarkMode
+                        ? "text-teal-500 focus:ring-teal-400"
+                        : "text-teal-600 focus:ring-teal-500"
+                    }`}
+                    required={isRequired}
+                  />
+                  <span>No</span>
+                </label>
+              </div>
+              {answer === true && (
+                <input
+                  type="text"
+                  value={
+                    (userAnswers["What's the notice period?"] as string) || ""
+                  }
+                  onChange={(e) =>
+                    setUserAnswers((prev) => ({
+                      ...prev,
+                      "What's the notice period?": e.target.value,
+                    }))
+                  }
+                  className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                    isDarkMode
+                      ? "bg-gray-700/80 border border-teal-600 focus:ring-teal-400 text-teal-200 placeholder-teal-300/70"
+                      : "bg-white/80 border border-teal-200 focus:ring-teal-500 text-teal-800 placeholder-teal-400/70"
+                  }`}
+                  placeholder="What's the notice period?"
+                  required={isRequired}
+                />
+              )}
             </>
           ) : (
-            <>
-              <input
-                ref={(el) => {
-                  if (el) inputRefs.current[index] = el as HTMLInputElement;
-                }}
-                type="text"
-                value={(userAnswers[question] as string) || ""}
-                onChange={(e) => handleAnswerChange(index, e.target.value)}
-                className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  isDarkMode
-                    ? `bg-gray-700/80 border ${
-                        error ? "border-red-400" : "border-teal-600"
-                      } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
-                    : `bg-white/80 border ${
-                        error ? "border-red-400" : "border-teal-200"
-                      } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+            <div className="mt-4 flex space-x-6">
+              <label
+                className={`flex items-center space-x-2 cursor-pointer ${
+                  isDarkMode ? "text-teal-300" : "text-teal-700"
                 }`}
-                placeholder="Enter your answer"
-                required={isRequired}
-              />
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-            </>
-          )}
-        </div>
+              >
+                <input
+                  type="radio"
+                  name={`radio-${index}`}
+                  checked={answer === true}
+                  onChange={() => handleAnswerChange(index, true)}
+                  className={`cursor-pointer ${
+                    isDarkMode
+                      ? "text-teal-500 focus:ring-teal-400"
+                      : "text-teal-600 focus:ring-teal-500"
+                  }`}
+                  required={isRequired}
+                />
+                <span>Yes</span>
+              </label>
+              <label
+                className={`flex items-center space-x-2 cursor-pointer ${
+                  isDarkMode ? "text-teal-300" : "text-teal-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`radio-${index}`}
+                  checked={answer === false}
+                  onChange={() => handleAnswerChange(index, false)}
+                  className={`cursor-pointer ${
+                    isDarkMode
+                      ? "text-teal-500 focus:ring-teal-400"
+                      : "text-teal-600 focus:ring-teal-500"
+                  }`}
+                  required={isRequired}
+                />
+                <span>No</span>
+              </label>
+            </div>
+          )
+        ) : currentType === "Number" ? (
+          <>
+            <input
+              ref={(el) => {
+                if (el) inputRefs.current[index] = el as HTMLInputElement;
+              }}
+              type="number"
+              value={(userAnswers[question] as string) || ""}
+              onChange={(e) => handleAnswerChange(index, e.target.value)}
+              className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isDarkMode
+                  ? `bg-gray-700/80 border ${
+                      error ? "border-red-400" : "border-teal-600"
+                    } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
+                  : `bg-white/80 border ${
+                      error ? "border-red-400" : "border-teal-200"
+                    } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+              }`}
+              placeholder="Enter a number"
+              required={isRequired}
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </>
+        ) : currentType === "Date" ? (
+          <>
+            <input
+              ref={(el) => {
+                if (el) inputRefs.current[index] = el as HTMLInputElement;
+              }}
+              type="date"
+              value={(userAnswers[question] as string) || ""}
+              onChange={(e) => handleAnswerChange(index, e.target.value)}
+              className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isDarkMode
+                  ? `bg-gray-700/80 border ${
+                      error ? "border-red-400" : "border-teal-600"
+                    } focus:ring-teal-400 text-teal-200`
+                  : `bg-white/80 border ${
+                      error ? "border-red-400" : "border-teal-200"
+                    } focus:ring-teal-500 text-teal-800`
+              }`}
+              placeholder="Select a date"
+              required={isRequired}
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </>
+        ) : currentType === "Email" ? (
+          <>
+            <input
+              ref={(el) => {
+                if (el) inputRefs.current[index] = el as HTMLInputElement;
+              }}
+              type="email"
+              value={(userAnswers[question] as string) || ""}
+              onChange={(e) => handleAnswerChange(index, e.target.value)}
+              className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isDarkMode
+                  ? `bg-gray-700/80 border ${
+                      error ? "border-red-400" : "border-teal-600"
+                    } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
+                  : `bg-white/80 border ${
+                      error ? "border-red-400" : "border-teal-200"
+                    } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+              }`}
+              placeholder="Enter an email address"
+              required={isRequired}
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </>
+        ) : currentType === "Paragraph" ? (
+          <>
+            <textarea
+              ref={(el) => {
+                if (el) inputRefs.current[index] = el as HTMLTextAreaElement;
+              }}
+              value={(userAnswers[question] as string) || ""}
+              onChange={(e) => handleAnswerChange(index, e.target.value)}
+              className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isDarkMode
+                  ? `bg-gray-700/80 border ${
+                      error ? "border-red-400" : "border-teal-600"
+                    } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
+                  : `bg-white/80 border ${
+                      error ? "border-red-400" : "border-teal-200"
+                    } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+              }`}
+              placeholder="Enter your answer"
+              rows={3}
+              required={isRequired}
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </>
+        ) : (
+          <>
+            <input
+              ref={(el) => {
+                if (el) inputRefs.current[index] = el as HTMLInputElement;
+              }}
+              type="text"
+              value={(userAnswers[question] as string) || ""}
+              onChange={(e) => handleAnswerChange(index, e.target.value)}
+              className={`mt-4 p-3 w-full rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isDarkMode
+                  ? `bg-gray-700/80 border ${
+                      error ? "border-red-400" : "border-teal-600"
+                    } focus:ring-teal-400 text-teal-200 placeholder-teal-300/70`
+                  : `bg-white/80 border ${
+                      error ? "border-red-400" : "border-teal-200"
+                    } focus:ring-teal-500 text-teal-800 placeholder-teal-400/70`
+              }`}
+              placeholder="Enter your answer"
+              required={isRequired}
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const handleContinueToDocument = () => {
     setShowCertificationPopup(false);

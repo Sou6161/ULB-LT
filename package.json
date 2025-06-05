@@ -37,7 +37,8 @@
     "react-toastify": "^11.0.5",
     "shepherd.js": "^14.5.0",
     "tailwind-merge": "^3.2.0",
-    "tailwindcss": "^4.0.7"
+    "tailwindcss": "^4.0.7",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
