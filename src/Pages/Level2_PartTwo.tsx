@@ -165,13 +165,13 @@ const LevelTwoPart_Two = () => {
     console.log(`Selected text: "${selectedText}"`);
 
     let textWithoutBrackets = selectedText;
-    let hasValidBrackets = false;
+    // let hasValidBrackets = false;
     let hasValidSpanClass = false;
     let fullPlaceholderText: string | null = null;
 
     if (selectedText.startsWith("[") && selectedText.endsWith("]")) {
       textWithoutBrackets = selectedText.slice(1, -1);
-      hasValidBrackets = true;
+      // hasValidBrackets = true;
       hasValidSpanClass = true;
     } else {
       const node = selection.anchorNode;
