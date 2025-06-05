@@ -72,16 +72,16 @@ interface DivWithDropdownProps {
   isFollowUp?: boolean;
 }
 
-interface QuestionnaireState {
-  uniqueQuestions: string[];
-  questionOrder: number[];
-  questionTexts: string[];
-  selectedTypes: string[];
-  typeChangedStates: boolean[];
-  requiredQuestions: boolean[];
-  requiredChangedStates: boolean[];
-  scoredQuestions: Record<number, { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean }>;
-}
+// interface QuestionnaireState {
+//   uniqueQuestions: string[];
+//   questionOrder: number[];
+//   questionTexts: string[];
+//   selectedTypes: string[];
+//   typeChangedStates: boolean[];
+//   requiredQuestions: boolean[];
+//   requiredChangedStates: boolean[];
+//   scoredQuestions: Record<number, { typeScored: boolean; requiredScored: boolean; requiredCorrect?: boolean }>;
+// }
 
 const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
   textValue,
