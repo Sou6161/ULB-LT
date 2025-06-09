@@ -25,6 +25,13 @@ const icons: Icon[] = [
   { icon: <TbSettingsPlus />, label: "Big Condition" },
 ];
 
+// Mapping for small conditions to their corresponding questions
+const smallConditionToQuestionMap: { [key: string]: string } = {
+  "The Employee may be required to work at other locations.": "Does the employee need to work at additional locations besides the normal place of work?",
+  "The Employee shall not receive additional payment for overtime worked": "Is the employee entitled to overtime pay?",
+  "The Employee is entitled to overtime pay for authorized overtime work": "Is the employee entitled to overtime pay?",
+};
+
 const LevelTwoPart_Two = () => {
   const { isDarkMode } = useContext(ThemeContext);
   const location = useLocation();
@@ -165,14 +172,18 @@ const LevelTwoPart_Two = () => {
     console.log(`Selected text: "${selectedText}"`);
 
     let textWithoutBrackets = selectedText;
-    // let hasValidBrackets = false;
     let hasValidSpanClass = false;
     let fullPlaceholderText: string | null = null;
 
+    // Process the selected text based on its type
     if (selectedText.startsWith("[") && selectedText.endsWith("]")) {
-      textWithoutBrackets = selectedText.slice(1, -1);
-      // hasValidBrackets = true;
+      textWithoutBrackets = selectedText.slice(1, -1); // Remove [ and ]
       hasValidSpanClass = true;
+    } else if (selectedText.startsWith("{") && selectedText.endsWith("}")) {
+      // For small conditions, remove curly braces and slashes
+      textWithoutBrackets = selectedText
+        .slice(1, -1) // Remove { and }
+        .replace(/^\/|\/$/g, ""); // Remove leading and trailing slashes
     } else {
       const node = selection.anchorNode;
       if (node && (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE)) {
@@ -516,6 +527,8 @@ const LevelTwoPart_Two = () => {
           >
             {[...new Set(highlightedTexts)].map((text, index) => {
               const { primaryValue } = determineQuestionType(text);
+              // Fallback to explicit mapping if determineQuestionType doesn't provide a primaryValue
+              const displayText = primaryValue || smallConditionToQuestionMap[text] || text;
               const questionType = selectedTypes[index] || "Text";
               return (
                 <li key={index} className="flex items-center justify-between">
@@ -525,7 +538,7 @@ const LevelTwoPart_Two = () => {
                         isDarkMode ? "text-teal-200" : "text-teal-900"
                       }`}
                     >
-                      {primaryValue || text}
+                      {displayText}
                     </span>
                   </div>
                   <span
@@ -610,4 +623,4 @@ const LevelTwoPart_Two = () => {
 export default LevelTwoPart_Two;
 
 
-// working
+// latest code
