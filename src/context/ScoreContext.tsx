@@ -1,40 +1,49 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type ScoreContextType = {
   totalScore: number;
   levelTwoScore: number;
   questionnaireScore: number;
-  updateScore: (delta: number) => void;
-  setLevelTwoScore: (score: number) => void;
+  updateTotalScore: (delta: number) => void;
+  updateLevelTwoScore: (delta: number) => void;
   updateQuestionnaireScore: (delta: number) => void;
   resetAllScores: () => void;
+  setTotalScore: (score: number) => void;
+  setLevelTwoScore: (score: number) => void;
+  resetScore: () => void;
 };
 
 const ScoreContext = createContext<ScoreContextType>({
   totalScore: 0,
   levelTwoScore: 0,
   questionnaireScore: 0,
-  updateScore: () => {},
-  setLevelTwoScore: () => {},
+  updateTotalScore: () => {},
+  updateLevelTwoScore: () => {},
   updateQuestionnaireScore: () => {},
   resetAllScores: () => {},
+  setTotalScore: () => {},
+  setLevelTwoScore: () => {},
+  resetScore: () => {},
 });
 
-export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
+export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialize scores from sessionStorage or default to 0
   const [totalScore, setTotalScore] = useState(() => {
-    return parseInt(sessionStorage.getItem('totalScore') || '0', 10);
-  });
-  
-  const [levelTwoScore, setLevelTwoScore] = useState(() => {
-    return parseInt(sessionStorage.getItem('levelTwoScore') || '0', 10);
-  });
-  
-  const [questionnaireScore, setQuestionnaireScore] = useState(() => {
-    return parseInt(sessionStorage.getItem('questionnaireScore') || '0', 10);
+    const saved = sessionStorage.getItem('totalScore');
+    return saved ? parseInt(saved, 10) : 0;
   });
 
-  // Persist scores to sessionStorage whenever they change
+  const [levelTwoScore, setLevelTwoScore] = useState(() => {
+    const saved = sessionStorage.getItem('levelTwoScore');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const [questionnaireScore, setQuestionnaireScore] = useState(() => {
+    const saved = sessionStorage.getItem('questionnaireScore');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  // Save scores to sessionStorage whenever they change
   useEffect(() => {
     sessionStorage.setItem('totalScore', totalScore.toString());
   }, [totalScore]);
@@ -47,34 +56,26 @@ export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
     sessionStorage.setItem('questionnaireScore', questionnaireScore.toString());
   }, [questionnaireScore]);
 
-  const updateScore = (delta: number) => {
-    setTotalScore(prev => {
-      const newScore = Math.max(0, prev + delta);
-      console.log(`updateScore: Total score updated to ${newScore} (delta: ${delta})`);
-      return newScore;
-    });
+  // Update total score whenever levelTwoScore or questionnaireScore changes
+  useEffect(() => {
+    setTotalScore(levelTwoScore + questionnaireScore);
+  }, [levelTwoScore, questionnaireScore]);
+
+  const updateTotalScore = (delta: number) => {
+    setTotalScore(prev => prev + delta);
   };
 
-  const updateLevelTwoScore = (score: number) => {
-    setLevelTwoScore(score);
-    setTotalScore(_prev => {
-      // Adjust totalScore to include levelTwoScore and questionnaireScore
-      const newTotal = score + questionnaireScore;
-      console.log(`updateLevelTwoScore: Level two score set to ${score}, totalScore updated to ${newTotal}`);
-      return newTotal;
+  const updateLevelTwoScore = (delta: number) => {
+    setLevelTwoScore(prev => {
+      const newScore = prev + delta;
+      return newScore;
     });
   };
 
   const updateQuestionnaireScore = (delta: number) => {
     setQuestionnaireScore(prev => {
-      const newScore = Math.max(0, prev + delta);
-      console.log(`updateQuestionnaireScore: Questionnaire score updated to ${newScore} (delta: ${delta})`);
+      const newScore = prev + delta;
       return newScore;
-    });
-    setTotalScore(_prev => {
-      const newTotal = levelTwoScore + (questionnaireScore + delta);
-      console.log(`updateQuestionnaireScore: Total score updated to ${newTotal}`);
-      return newTotal;
     });
   };
 
@@ -85,7 +86,15 @@ export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
     sessionStorage.removeItem('totalScore');
     sessionStorage.removeItem('levelTwoScore');
     sessionStorage.removeItem('questionnaireScore');
-    console.log("resetAllScores: All scores reset");
+  };
+
+  const resetScore = () => {
+    setTotalScore(0);
+    setLevelTwoScore(0);
+    setQuestionnaireScore(0);
+    sessionStorage.removeItem('totalScore');
+    sessionStorage.removeItem('levelTwoScore');
+    sessionStorage.removeItem('questionnaireScore');
   };
 
   return (
@@ -94,10 +103,13 @@ export const ScoreProvider = ({ children }: { children: React.ReactNode }) => {
         totalScore,
         levelTwoScore,
         questionnaireScore,
-        updateScore,
-        setLevelTwoScore: updateLevelTwoScore,
+        updateTotalScore,
+        updateLevelTwoScore,
         updateQuestionnaireScore,
         resetAllScores,
+        setTotalScore,
+        setLevelTwoScore,
+        resetScore,
       }}
     >
       {children}

@@ -10,6 +10,7 @@ import { useUserAnswers } from "../context/UserAnswersContext";
 import parse, { DOMNode, Element } from "html-react-parser";
 import PerformanceStar_SubLevel_1Game from "../components/PerformanceStar_SubLevel_1Game";
 import CodeCircuit_SubLevel_3Game from "../components/CodeCircuit_SubLevel_3Game";
+import SmallCondition_SubLevel_2Game from "../components/SmallCondition_SubLevel_2Game";
 import { useScore } from "../context/ScoreContext";
 
 interface QuestionnaireState {
@@ -115,14 +116,47 @@ const CodeCircuit_SubLevel_3GamePopup: React.FC<
   );
 };
 
+// Add new interface for SmallCondition_SubLevel_2GamePopup
+interface SmallCondition_SubLevel_2GamePopupProps {
+  isVisible: boolean;
+  isDarkMode: boolean;
+  score: number;
+  onContinue: () => void;
+  onReplay: () => void;
+}
+
+const SmallCondition_SubLevel_2GamePopup: React.FC<SmallCondition_SubLevel_2GamePopupProps> = ({
+  isVisible,
+  isDarkMode,
+  score,
+  onContinue,
+  onReplay,
+}) => {
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+      <SmallCondition_SubLevel_2Game
+        score={score}
+        onRetry={onReplay}
+        onContinue={onContinue}
+        isDarkMode={isDarkMode}
+      />
+    </div>
+  );
+};
+
 const Live_Generation = () => {
   const { isDarkMode } = useContext(ThemeContext);
   const navigate = useNavigate();
-  const { highlightedTexts: originalHighlightedTexts } = useHighlightedText();
+  const { highlightedTexts: originalHighlightedTexts, setHighlightedTexts: setOriginalHighlightedTexts } = useHighlightedText();
   const {
     selectedTypes: originalSelectedTypes,
     editedQuestions: originalEditedQuestions,
     requiredQuestions: originalRequiredQuestions,
+    setSelectedTypes: setOriginalSelectedTypes,
+    setEditedQuestions: setOriginalEditedQuestions,
+    setRequiredQuestions: setOriginalRequiredQuestions,
   } = useQuestionType();
   const { determineQuestionType, findPlaceholderByValue } =
     useQuestionEditContext();
@@ -148,10 +182,11 @@ const Live_Generation = () => {
     showCodeCircuit_SubLevel_3GamePopup,
     setShowCodeCircuit_SubLevel_3GamePopup,
   ] = useState(false);
+  const [showSmallCondition_SubLevel_2GamePopup, setShowSmallCondition_SubLevel_2GamePopup] = useState(false);
   const [certificationMessage, setCertificationMessage] = useState("");
   const [showWarning, setShowWarning] = useState(false);
   const [calculatedScore, setCalculatedScore] = useState<number>(0);
-  const { totalScore } = useScore();
+  const { totalScore, setTotalScore, resetScore } = useScore();
 
   // Load userAnswers from sessionStorage on component mount
   useEffect(() => {
@@ -1474,6 +1509,11 @@ const Live_Generation = () => {
     navigate("/Finish", { state: { userAnswers } });
   };
 
+  const handleFinishSmallCondition_SubLevel_2Game = () => {
+    setShowSmallCondition_SubLevel_2GamePopup(false);
+    navigate("/Finish", { state: { userAnswers } });
+  };
+
   const handleFinish = () => {
     const hasErrors = Object.values(inputErrors).some((error) => error !== "");
     if (hasErrors) {
@@ -1549,6 +1589,8 @@ const Live_Generation = () => {
     const selectedPart = localStorage.getItem("selectedPart");
     if (selectedPart === "1") {
       setShowCertificationPopup(true);
+    } else if (selectedPart === "2") {
+      setShowSmallCondition_SubLevel_2GamePopup(true);
     } else if (selectedPart === "3") {
       setShowCodeCircuit_SubLevel_3GamePopup(true);
     } else {
@@ -1557,8 +1599,45 @@ const Live_Generation = () => {
   };
 
   const handleReplay = () => {
+    // Reset all state
     setCalculatedScore(0);
     setAdditionalLocations([""]);
+    setUserAnswers({});
+    setHighlightedTexts([]);
+    setLocalSelectedTypes([]);
+    setLocalEditedQuestions([]);
+    setLocalRequiredQuestions([]);
+    setInputErrors({});
+    setShowWarning(false);
+    setShowCertificationPopup(false);
+    setShowSmallCondition_SubLevel_2GamePopup(false);
+    setShowCodeCircuit_SubLevel_3GamePopup(false);
+    setCertificationMessage("");
+    
+    // Reset context values
+    setOriginalHighlightedTexts([]);
+    setOriginalSelectedTypes([]);
+    setOriginalEditedQuestions([]);
+    setOriginalRequiredQuestions([]);
+    resetScore(); // Use the resetScore function instead of setTotalScore
+    
+    // Save important localStorage values before clearing
+    const selectedPart = localStorage.getItem("selectedPart");
+    const theme = localStorage.getItem("theme");
+    
+    // Clear all storage
+    sessionStorage.clear(); // Clear all session storage
+    localStorage.clear(); // Clear all localStorage
+    
+    // Restore important values
+    if (selectedPart) {
+      localStorage.setItem("selectedPart", selectedPart);
+    }
+    if (theme) {
+      localStorage.setItem("theme", theme);
+    }
+    
+    // Navigate back to questionnaire
     navigate("/Level-Two-Part-Two");
   };
 
@@ -1692,6 +1771,15 @@ const Live_Generation = () => {
               onContinue={handleContinueToDocument}
               onReplay={handleReplay}
               score={calculatedScore}
+            />
+          )}
+          {selectedPart === "2" && (
+            <SmallCondition_SubLevel_2GamePopup
+              isVisible={showSmallCondition_SubLevel_2GamePopup}
+              isDarkMode={isDarkMode}
+              score={calculatedScore}
+              onContinue={handleFinishSmallCondition_SubLevel_2Game}
+              onReplay={handleReplay}
             />
           )}
           {selectedPart === "3" && (
