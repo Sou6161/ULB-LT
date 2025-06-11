@@ -186,7 +186,7 @@ const Live_Generation = () => {
   const [certificationMessage, setCertificationMessage] = useState("");
   const [showWarning, setShowWarning] = useState(false);
   const [calculatedScore, setCalculatedScore] = useState<number>(0);
-  const { totalScore, setTotalScore, resetScore } = useScore();
+  const { totalScore, resetScore } = useScore();
 
   // Load userAnswers from sessionStorage on component mount
   useEffect(() => {

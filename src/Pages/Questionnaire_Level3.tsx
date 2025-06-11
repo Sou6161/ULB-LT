@@ -203,7 +203,7 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
 
 const Questionnaire_Level3 = () => {
   const { isDarkMode } = useContext(ThemeContext);
-  const { totalScore, updateScore } = useScore();
+  const { totalScore, updateTotalScore } = useScore();
   const [leftActive, setLeftActive] = useState(true);
   const [rightActive, setRightActive] = useState(false);
   const { highlightedTexts } = useHighlightedText();
@@ -258,7 +258,7 @@ const Questionnaire_Level3 = () => {
     const isCorrect = selectedType === correctType || isEquivalent;
     const points = isCorrect ? 2 : -2;
     
-    updateScore(points);
+    updateTotalScore(points);
     showFeedback(points);
     
     setScoredQuestions(prev => ({
@@ -269,12 +269,12 @@ const Questionnaire_Level3 = () => {
         typeCorrect: isCorrect
       }
     }));
-  }, [uniqueQuestions, enhancedDetermineQuestionType, scoredQuestions, updateScore]);
+  }, [uniqueQuestions, enhancedDetermineQuestionType, scoredQuestions, updateTotalScore]);
 
   const scoreRequiredStatus = useCallback((index: number, isRequired: boolean) => {
     if (isRequired) {
       if (!scoredQuestions[index]?.requiredScored) {
-        updateScore(2);
+        updateTotalScore(2);
         showFeedback(2);
         setScoredQuestions(prev => ({
           ...prev,
@@ -287,7 +287,7 @@ const Questionnaire_Level3 = () => {
       }
     } else {
       if (scoredQuestions[index]?.requiredScored) {
-        updateScore(-2);
+        updateTotalScore(-2);
         showFeedback(-2);
         setScoredQuestions(prev => ({
           ...prev,
@@ -299,7 +299,7 @@ const Questionnaire_Level3 = () => {
         }));
       }
     }
-  }, [updateScore, scoredQuestions]);
+  }, [updateTotalScore, scoredQuestions]);
 
   const checkForBonus = useCallback(() => {
     if (uniqueQuestions.length === 0 || bonusAwarded) return;
@@ -317,11 +317,11 @@ const Questionnaire_Level3 = () => {
     });
 
     if (allCorrect) {
-      updateScore(10);
+      updateTotalScore(10);
       showFeedback(10);
       setBonusAwarded(true);
     }
-  }, [uniqueQuestions, selectedTypes, requiredQuestions, enhancedDetermineQuestionType, bonusAwarded, updateScore]);
+  }, [uniqueQuestions, selectedTypes, requiredQuestions, enhancedDetermineQuestionType, bonusAwarded, updateTotalScore]);
 
   useEffect(() => {
     const processedTexts: string[] = [];
