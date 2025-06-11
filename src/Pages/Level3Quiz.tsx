@@ -22,7 +22,7 @@ const icons = [
 
 const Level3_Quiz = () => {
   const { isDarkMode } = useContext(ThemeContext);
-  const { totalScore, updateScore } = useScore();
+  const { totalScore, updateTotalScore } = useScore();
   const [tooltip, setTooltip] = useState<string | null>(null);
   const { highlightedTexts, addHighlightedText } = useHighlightedText();
   const { selectedTypes } = useQuestionType();
@@ -101,33 +101,33 @@ const handleIconClick = (label: string) => {
   // Handle scoring
   if (isCorrectButton) {
     if (label === "Edit PlaceHolder" && !foundPlaceholders.includes(textWithoutBrackets)) {
-      updateScore(3);
+      updateTotalScore(3);
       setScoreChange(3);
       setTimeout(() => setScoreChange(null), 2000);
       setFoundPlaceholders((prev) => [...prev, textWithoutBrackets]);
     } else if (label === "Small Condition" && !foundSmallConditions.includes(textWithoutBrackets)) {
-      updateScore(3);
+      updateTotalScore(3);
       setScoreChange(3);
       setTimeout(() => setScoreChange(null), 2000);
       setFoundSmallConditions((prev) => [...prev, textWithoutBrackets]);
     } else if (label === "Loop" && !foundLoops.includes(textWithoutBrackets)) {
-      updateScore(3);
+      updateTotalScore(3);
       setScoreChange(3);
       setTimeout(() => setScoreChange(null), 2000);
       setFoundLoops((prev) => [...prev, textWithoutBrackets]);
     } else if (label === "Big Condition" && !foundBigConditions.includes(textWithoutBrackets)) {
-      updateScore(3);
+      updateTotalScore(3);
       setScoreChange(3);
       setTimeout(() => setScoreChange(null), 2000);
       setFoundBigConditions((prev) => [...prev, textWithoutBrackets]);
     } else if (label === "Calculations" && !foundCalculations.includes(textWithoutBrackets)) {
-      updateScore(3);
+      updateTotalScore(3);
       setScoreChange(3);
       setTimeout(() => setScoreChange(null), 2000);
       setFoundCalculations((prev) => [...prev, textWithoutBrackets]);
     }
   } else {
-    updateScore(-2);
+    updateTotalScore(-2);
     if (totalScore > 0) {
       setScoreChange(-2);
       setTimeout(() => setScoreChange(null), 2000);

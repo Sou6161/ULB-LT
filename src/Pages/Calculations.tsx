@@ -11,7 +11,7 @@ const Calculations = () => {
   const { isDarkMode } = useContext(ThemeContext);
   const navigate = useNavigate();
   const { highlightedTexts } = useHighlightedText();
-  const { totalScore, updateScore } = useScore();
+  const { totalScore, updateTotalScore } = useScore();
   const [clickedButton, setClickedButton] = useState("Multiply");
   const [inputType, setInputType] = useState("text");
   const [showIncludeOptions, setShowIncludeOptions] = useState(false);
@@ -34,10 +34,10 @@ const Calculations = () => {
     // Only score if the button actually changed
     if (previousButton !== buttonName) {
       if (buttonName === "Multiply") {
-        updateScore(3);
+        updateTotalScore(3);
         setScoreChange(3);
       } else {
-        updateScore(-2);
+        updateTotalScore(-2);
         setScoreChange(-2);
       }
       setTimeout(() => setScoreChange(null), 2000);
@@ -53,7 +53,7 @@ const Calculations = () => {
     
     // Only score the first time include is clicked
     if (!showIncludeOptions && !hasScoredFirstInclude) {
-      updateScore(3);
+      updateTotalScore(3);
       setScoreChange(3);
       setTimeout(() => setScoreChange(null), 2000);
       setHasScoredFirstInclude(true);
@@ -64,10 +64,10 @@ const Calculations = () => {
     // Only score the final include once
     if (!hasScoredFinalInclude) {
       if (inputType === "number" && inputValue) {
-        updateScore(3);
+        updateTotalScore(3);
         setScoreChange(3);
       } else {
-        updateScore(-2);
+        updateTotalScore(-2);
         setScoreChange(-2);
       }
       setTimeout(() => setScoreChange(null), 2000);
