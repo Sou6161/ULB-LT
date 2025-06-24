@@ -24,14 +24,14 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
 
   useEffect(() => {
     const calculatedPercentage = (correctAnswers / totalQuestions) * 100;
-    
+
     // Animate progress bar
     setTimeout(() => setPercentage(calculatedPercentage), 800);
 
     // Show pro tip for perfect score
     if (correctAnswers === totalQuestions) {
       setTimeout(() => setShowProTip(true), 1500);
-      
+
       // Trigger confetti
       setTimeout(() => {
         confetti({
@@ -238,17 +238,17 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
         animate="visible"
         style={{ perspective: 1000 }}
       >
-        
+
         {/* Header with Progress Circle */}
         <div className="flex items-center justify-between mb-6">
-          <motion.div 
+          <motion.div
             className="flex-1"
             variants={headerVariants}
             initial="hidden"
             animate="visible"
           >
             <div className="flex items-center space-x-3 mb-3">
-              <motion.div 
+              <motion.div
                 className={`flex items-center justify-center w-10 h-10 rounded-full
                   ${isDarkMode ? 'bg-teal-500/20 border border-teal-400/30' : 'bg-teal-100 border border-teal-200'}
                 `}
@@ -259,19 +259,19 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
               </motion.div>
               <div>
                 <h2 className={`text-xl font-bold bg-gradient-to-r bg-clip-text text-transparent
-                  ${isDarkMode 
-                    ? 'from-teal-300 via-cyan-300 to-blue-300' 
+                  ${isDarkMode
+                    ? 'from-teal-300 via-cyan-300 to-blue-300'
                     : 'from-teal-600 via-cyan-600 to-blue-600'
                   }`}>
                   Small Conditions Mastery
                 </h2>
-                <motion.div 
+                <motion.div
                   className="flex items-center space-x-2"
                   variants={starVariants}
                   initial="hidden"
                   animate="visible"
                 >
-                  <motion.span 
+                  <motion.span
                     className="text-xl"
                     animate={{
                       scale: [1, 1.2, 1],
@@ -288,8 +288,8 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
                 </motion.div>
               </div>
             </div>
-            
-            <motion.p 
+
+            <motion.p
               className={`text-xs font-medium px-3 py-1 rounded-full inline-block
                 ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-white/70 text-gray-600'}
               `}
@@ -302,13 +302,13 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
           </motion.div>
 
           {/* Progress Circle with Glow Effect */}
-          <motion.div 
+          <motion.div
             className="relative w-24 h-24 ml-4"
             variants={progressVariants}
             initial="hidden"
             animate="visible"
           >
-            <motion.div 
+            <motion.div
               className={`absolute inset-0 rounded-full blur-lg opacity-20
                 ${percentage >= 80 ? 'bg-green-400' : percentage >= 60 ? 'bg-yellow-400' : 'bg-red-400'}
               `}
@@ -316,7 +316,7 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
               initial="initial"
               animate="animate"
             />
-            
+
             <div className="relative z-10">
               <CircularProgressbar
                 value={percentage}
@@ -336,22 +336,22 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
         </div>
 
         {/* Score Details */}
-        <motion.div 
+        <motion.div
           className="text-center mb-6"
           variants={scoreVariants}
           initial="hidden"
           animate="visible"
         >
-          <motion.div 
+          <motion.div
             className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl
-              ${isDarkMode 
-                ? 'bg-gray-700/50 border border-gray-600/30' 
+              ${isDarkMode
+                ? 'bg-gray-700/50 border border-gray-600/30'
                 : 'bg-white/80 border border-gray-200/50'
               }`}
             whileHover={{
               scale: 1.05,
-              boxShadow: isDarkMode 
-                ? "0 10px 30px rgba(0,0,0,0.3)" 
+              boxShadow: isDarkMode
+                ? "0 10px 30px rgba(0,0,0,0.3)"
                 : "0 10px 30px rgba(0,0,0,0.1)"
             }}
             transition={{ type: "spring", stiffness: 300 }}
@@ -373,10 +373,10 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
         {/* Pro Tip Section */}
         <AnimatePresence>
           {correctAnswers === totalQuestions && showProTip && (
-            <motion.div 
+            <motion.div
               className={`mb-6 p-4 rounded-xl
-                ${isDarkMode 
-                  ? 'bg-gradient-to-r from-teal-900/50 to-cyan-900/50 border border-teal-500/30' 
+                ${isDarkMode
+                  ? 'bg-gradient-to-r from-teal-900/50 to-cyan-900/50 border border-teal-500/30'
                   : 'bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200'
                 }`}
               variants={proTipVariants}
@@ -385,7 +385,7 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
               exit="hidden"
             >
               <div className="flex items-start space-x-2">
-                <motion.span 
+                <motion.span
                   className="text-lg"
                   animate={{
                     rotate: [0, 10, -10, 0],
@@ -408,7 +408,7 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
                   <p className={`text-xs leading-relaxed
                     ${isDarkMode ? 'text-teal-200' : 'text-teal-800'}
                   `}>
-                    Modularize your templates to improve readability and scalability. 
+                    Modularize your templates to improve readability and scalability.
                     Breaking conditions into reusable blocks helps you debug faster.
                   </p>
                 </div>
@@ -433,7 +433,7 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
             whileTap="tap"
             custom={0}
           >
-            <motion.span 
+            <motion.span
               className="text-sm"
               whileHover={{ rotate: 180 }}
               transition={{ duration: 0.3 }}
@@ -442,7 +442,7 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
             </motion.span>
             <span className="text-sm">Retry</span>
           </motion.button>
-          
+
           <motion.button
             onClick={onContinue}
             disabled={correctAnswers < 3}
@@ -463,7 +463,7 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
             custom={1}
           >
             {correctAnswers >= 3 && (
-              <motion.div 
+              <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
                 initial={{ x: "-100%" }}
                 whileHover={{
@@ -472,7 +472,7 @@ const SmallCondition_SubLevel_2Game: React.FC<SmallCondition_SubLevel_2GameProps
                 }}
               />
             )}
-            <motion.span 
+            <motion.span
               className="text-sm"
               whileHover={correctAnswers >= 3 ? { x: 4 } : {}}
               transition={{ duration: 0.2 }}

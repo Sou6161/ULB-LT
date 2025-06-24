@@ -12,11 +12,20 @@ import { useLocation, useNavigate } from "react-router";
 import { CrispChat } from "../bot/knowledge";
 import { useScore } from "../context/ScoreContext";
 import parse from "html-react-parser";
+import Shepherd from "shepherd.js";
+import "shepherd.js/dist/css/shepherd.css";
 
 // Define icon type for clarity
 interface Icon {
   icon: JSX.Element;
   label: string;
+}
+
+// Interface for highlighted element state
+interface HighlightedElement {
+  text: string;
+  type: "placeholder" | "smallCondition" | "bigCondition";
+  bgColor: string;
 }
 
 const icons: Icon[] = [
@@ -30,15 +39,16 @@ const smallConditionToQuestionMap: { [key: string]: string } = {
   "The Employee may be required to work at other locations.": "Does the employee need to work at additional locations besides the normal place of work?",
   "The Employee shall not receive additional payment for overtime worked": "Is the employee entitled to overtime pay?",
   "The Employee is entitled to overtime pay for authorized overtime work": "Is the employee entitled to overtime pay?",
+  "The Employee may be required to perform additional duties as reasonably assigned by the Company": "Is the Employee required to perform additional duties as part of their employment?", 
 };
 
 const LevelTwoPart_Two = () => {
   const { isDarkMode } = useContext(ThemeContext);
   const location = useLocation();
   const [tooltip, setTooltip] = useState<string | null>(null);
-  const { highlightedTexts, addHighlightedText, setHighlightedTexts } = useHighlightedText();
-  const { selectedTypes } = useQuestionType();
-  const documentRef = useRef<HTMLDivElement | null>(null);
+  const { highlightedTexts, addHighlightedText } = useHighlightedText();
+  const { selectedTypes, setSelectedTypes } = useQuestionType();
+  const documentRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const isProcessingRef = useRef<boolean>(false);
   const { totalScore, levelTwoScore, setLevelTwoScore } = useScore();
@@ -47,6 +57,150 @@ const LevelTwoPart_Two = () => {
   const [foundPlaceholders, setFoundPlaceholders] = useState<string[]>([]);
   const [foundSmallConditions, setFoundSmallConditions] = useState<string[]>([]);
   const [foundBigConditions, setFoundBigConditions] = useState<string[]>([]);
+  const [highlightedElements, setHighlightedElements] = useState<HighlightedElement[]>([]);
+
+  // Function to find and spotlight specific text in the document
+  const spotlightTextInDocument = (searchText: string) => {
+    if (!documentRef.current) return null;
+
+    const walker = document.createTreeWalker(
+      documentRef.current,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    let node;
+    let targetElement: HTMLElement | null = null;
+
+    while ((node = walker.nextNode())) {
+      if (node.textContent && node.textContent.includes(searchText)) {
+        targetElement = node.parentElement;
+        break;
+      }
+    }
+
+    if (targetElement) {
+      // Add spotlight effect
+      targetElement.style.position = 'relative';
+      targetElement.style.zIndex = '9999';
+      targetElement.style.backgroundColor = isDarkMode ? 'rgba(255, 245, 157, 0.3)' : 'rgba(255, 245, 157, 0.5)';
+      targetElement.style.boxShadow = '0 0 20px rgba(255, 245, 157, 0.8)';
+      targetElement.style.borderRadius = '8px';
+      targetElement.style.padding = '8px';
+      targetElement.style.transition = 'all 0.3s ease-in-out';
+      
+      // Create pulsing animation
+      const pulseAnimation = targetElement.animate([
+        { boxShadow: '0 0 20px rgba(255, 245, 157, 0.8)' },
+        { boxShadow: '0 0 30px rgba(255, 245, 157, 1)' },
+        { boxShadow: '0 0 20px rgba(255, 245, 157, 0.8)' }
+      ], {
+        duration: 2000,
+        iterations: Infinity
+      });
+
+      // Store animation reference for cleanup
+      (targetElement as any)._pulseAnimation = pulseAnimation;
+      
+      // Scroll into view
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      return targetElement;
+    }
+
+    return null;
+  };
+
+  // Function to remove spotlight highlighting
+  const removeSpotlightHighlight = (element: HTMLElement | null) => {
+    if (element) {
+      element.style.backgroundColor = '';
+      element.style.boxShadow = '';
+      element.style.zIndex = '';
+      element.style.borderRadius = '';
+      element.style.padding = '';
+      
+      // Stop pulsing animation
+      if ((element as any)._pulseAnimation) {
+        (element as any)._pulseAnimation.cancel();
+        delete (element as any)._pulseAnimation;
+      }
+    }
+  };
+
+  let currentSpotlightElement: HTMLElement | null = null;
+
+  // Restore highlighted elements
+  useEffect(() => {
+    const savedHighlights = sessionStorage.getItem("highlightedElements");
+    if (savedHighlights && documentRef.current) {
+      try {
+        const restoredElements: HighlightedElement[] = JSON.parse(savedHighlights);
+        setHighlightedElements(restoredElements);
+        restoredElements.forEach(({ text, type, bgColor }) => {
+          if (type === "placeholder" && !foundPlaceholders.includes(text)) {
+            setFoundPlaceholders((prev) => [...prev, text]);
+            addHighlightedText(text);
+          } else if (type === "smallCondition" && !foundSmallConditions.includes(text)) {
+            setFoundSmallConditions((prev) => [...prev, text]);
+            addHighlightedText(text);
+          } else if (type === "bigCondition" && !foundBigConditions.includes(text)) {
+            setFoundBigConditions((prev) => [...prev, text]);
+            addHighlightedText(text);
+          }
+          highlightTextInDOM(text, bgColor, type);
+        });
+      } catch (error) {
+        console.error("Error restoring highlighted elements:", error);
+      }
+    }
+  }, []);
+
+  // Save highlighted element to sessionStorage
+  const saveHighlightedElement = (text: string, type: "placeholder" | "smallCondition" | "bigCondition", bgColor: string) => {
+    const savedHighlights = sessionStorage.getItem("highlightedElements");
+    let highlightedElements: HighlightedElement[] = savedHighlights ? JSON.parse(savedHighlights) : [];
+    highlightedElements = highlightedElements.filter((el) => el.text !== text);
+    const newElement: HighlightedElement = { text, type, bgColor };
+    highlightedElements.push(newElement);
+    sessionStorage.setItem("highlightedElements", JSON.stringify(highlightedElements));
+    setHighlightedElements(highlightedElements);
+    console.log("Saved highlighted element:", newElement);
+  };
+
+  const highlightTextInDOM = (text: string, bgColor: string, type: "placeholder" | "smallCondition" | "bigCondition") => {
+    if (documentRef.current) {
+      const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${escapedText})`, "gi");
+      const walker = document.createTreeWalker(documentRef.current, NodeFilter.SHOW_TEXT, null);
+      const textNodes: Text[] = [];
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent?.match(regex)) {
+          textNodes.push(node as Text);
+        }
+      }
+      textNodes.forEach((textNode) => {
+        const parent = textNode.parentElement;
+        if (parent && textNode.textContent) {
+          const parts = textNode.textContent.split(regex);
+          const fragment = document.createDocumentFragment();
+          parts.forEach((part, index) => {
+            if (index % 2 === 1) {
+              const span = document.createElement("span");
+              span.style.backgroundColor = bgColor;
+              span.textContent = part;
+              span.id = `${type}-highlight-${index}`;
+              fragment.appendChild(span);
+            } else {
+              fragment.appendChild(document.createTextNode(part));
+            }
+          });
+          parent.replaceChild(fragment, textNode);
+        }
+      });
+    }
+  };
 
   const processDocumentTextForPart1 = (html: string): string => {
     let updatedHtml = html;
@@ -62,8 +216,6 @@ const LevelTwoPart_Two = () => {
         return `<h2 className="text-2xl font-bold mt-6">(PENSION</h2><p className="mt-2">${content})</p>`;
       }
     );
-    // Preserve curly braces for small conditions
-    // Remove only {/ /} placeholders
     updatedHtml = updatedHtml.replace(/\{\/([\s\S]*?)\/\}/g, (_match, content) => content);
     return updatedHtml;
   };
@@ -74,21 +226,24 @@ const LevelTwoPart_Two = () => {
       ? parse(processDocumentTextForPart1(documentText))
       : <EmploymentAgreement />;
 
-  // Log document content for debugging
+  // Initialize selectedTypes if not already set
   useEffect(() => {
-    if (documentRef.current) {
-      console.log("Processed document content:", documentRef.current.innerHTML);
+    const savedTypes = sessionStorage.getItem("selectedQuestionTypes_2");
+    if (!savedTypes && highlightedTexts.length > 0) {
+      const initialTypes = highlightedTexts.map(() => "Text");
+      setSelectedTypes(initialTypes);
+      sessionStorage.setItem("selectedQuestionTypes_2", JSON.stringify(initialTypes));
     }
-  }, [documentContent]);
+  }, [highlightedTexts, setSelectedTypes]);
 
-  // Load saved state from sessionStorage (for highlightedTexts and scores only)
+  // Load saved state from sessionStorage
   useEffect(() => {
     const savedState = sessionStorage.getItem("levelTwoPartTwoState");
     if (savedState) {
       try {
         const parsedState = JSON.parse(savedState);
         if (JSON.stringify(parsedState.highlightedTexts || []) !== JSON.stringify(highlightedTexts)) {
-          setHighlightedTexts(parsedState.highlightedTexts || []);
+          addHighlightedText(parsedState.highlightedTexts || []);
         }
         if (JSON.stringify(parsedState.foundPlaceholders || []) !== JSON.stringify(foundPlaceholders)) {
           setFoundPlaceholders(parsedState.foundPlaceholders || []);
@@ -108,7 +263,7 @@ const LevelTwoPart_Two = () => {
     }
   }, []);
 
-  // Save state to sessionStorage (for highlightedTexts and scores only)
+  // Save state to sessionStorage
   useEffect(() => {
     const stateToSave = {
       highlightedTexts,
@@ -122,13 +277,11 @@ const LevelTwoPart_Two = () => {
 
   useEffect(() => {
     if (levelTwoScore !== score) {
-      console.log(`levelTwoScore updated to ${levelTwoScore}, syncing local score`);
       setScore(levelTwoScore);
     }
-  }, [levelTwoScore, score]);
+  }, [levelTwoScore]);
 
   useEffect(() => {
-    console.log("Location changed to:", location.pathname);
     localStorage.setItem("level", location.pathname);
   }, [location.pathname]);
 
@@ -148,7 +301,293 @@ const LevelTwoPart_Two = () => {
     };
   }, []);
 
-  const getDocumentText = (): string => {
+  // Product Tour: Sub Level 2 (Automating Small Conditions)
+  useEffect(() => {
+    if (selectedPart !== 2) return;
+
+    const tour = new Shepherd.Tour({
+      defaultStepOptions: {
+        cancelIcon: { enabled: true },
+        classes: "shadow-md bg-purple-dark",
+        scrollTo: { behavior: "smooth", block: "center" },
+      },
+      useModalOverlay: true,
+      confirmCancel: false,
+      tourName: `level-two-part-two-sublevel2-${Date.now()}`,
+    });
+
+    tour.addStep({
+      id: "introduction",
+      text: `
+        <div class="welcome-message">
+          <strong class="welcome-title">🚀 Welcome to Sub Level 2, automation champion!</strong>
+          <p class="welcome-text">You've conquered placeholders in Sub Level 1—now it's time to master Small Conditions. These are conditional clauses that appear or disappear based on user choices.</p>
+          <p class="mission-text"><strong>Your mission:</strong> Automate the clause using curly braces { }. Let's unlock this power!</p>
+        </div>
+      `,
+      attachTo: { element: document.body, on: "bottom-start" },
+      classes: "shepherd-theme-custom animate__animated animate__fadeIn",
+      buttons: [{ text: "Start Tour →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "identify-small-conditions",
+      text: `
+        Look at the <strong>JOB TITLE AND DUTIES</strong> section. See that text wrapped in curly braces like <strong>{The Employee may be required to perform additional duties as reasonably assigned by the Company}</strong>. 
+        Curly brackets mark Small Conditions—text that only appears when certain criteria are met. Small conditions are your tool for creating dynamic, personalized documents!
+      `,
+      attachTo: { element: document.body, on: "center" },
+      beforeShowPromise: () => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            // Spotlight the specific clause
+            currentSpotlightElement = spotlightTextInDocument("{The Employee may be required to perform additional duties as reasonably assigned by the Company}");
+            resolve();
+          }, 500);
+        });
+      },
+      buttons: [{ text: "Next →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "select-small-condition",
+      text: "Click and highlight the entire clause wrapped in curly braces: <strong>{The Employee may be required to perform additional duties as reasonably assigned by the Company}</strong>. Notice how the entire conditional text gets selected? Then click the <strong>Verify Selection</strong> button to proceed.",
+      attachTo: { element: document.body, on: "center" },
+      buttons: [
+        {
+          text: "Verify Selection ✅",
+          action: function () {
+            const selection = window.getSelection();
+            const selectedText = selection ? selection.toString().trim() : "";
+            const targetText = "{The Employee may be required to perform additional duties as reasonably assigned by the Company}";
+
+            if (selectedText === targetText) {
+              // Remove spotlight highlighting
+              removeSpotlightHighlight(currentSpotlightElement);
+              currentSpotlightElement = null;
+              tour.next();
+            } else {
+              alert("⚠️ Please select the entire clause exactly as shown: {The Employee may be required to perform additional duties as reasonably assigned by the Company}, including the curly braces.");
+            }
+          },
+        },
+      ],
+    });
+
+    tour.addStep({
+      id: "click-small-condition-button",
+      text: "Now click the <strong>Small Condition</strong> button. Congratulations! You've identified your first small condition.",
+      attachTo: { element: "#icon-small-condition", on: "bottom" },
+      buttons: [{ text: "Next →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "navigate-questionnaire",
+      text: `
+        Time to power up this condition! Head to the <strong>Questionnaire</strong> page by clicking <strong>Questionnaire</strong> in the menu bar. 
+        This is where you'll create the yes/no question by choosing the 'Radio button' that controls when this clause appears in the final document.
+      `,
+      attachTo: { element: "#Questionnaire-button", on: "right" },
+      buttons: [
+        {
+          text: "Go to Questionnaire →",
+          action: function () {
+            navigate('/Questionnaire');
+            tour.complete();
+          }
+        }
+      ],
+    });
+
+    tour.addStep({
+      id: "configure-question",
+      text: `
+        Perfect! You're now in the Small Conditions section of the questionnaire. See the default question: <strong>'Is the Employee required to perform additional duties as part of their employment?'</strong> 
+        This is a Radio button question with Yes/No options. Here's the magic:
+        <ul>
+          <li>If user selects <strong>YES</strong> → The clause appears in the document</li>
+          <li>If user selects <strong>NO</strong> → The clause disappears entirely</li>
+        </ul>
+        By DEFAULT, the condition would remain hidden unless selected to be displayed. Feel free to customize this question text to make it clearer for your users!
+      `,
+      attachTo: { element: document.body, on: "center" },
+      buttons: [{ text: "Next →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "test-condition",
+      text: `
+        Let's see your small condition in action! Switch to the <strong>Live Preview</strong> tab. 
+        Try selecting <strong>Yes</strong> for the 'Is the Employee required to perform additional duties as part of their employment?' question—watch the clause appear in the right hand side of the document! 
+        Now select <strong>No</strong>—see how it vanishes? You've just created dynamic document content that adapts to user needs!
+      `,
+      attachTo: { element: "#live_generation-button", on: "right" },
+      buttons: [
+        {
+          text: "Go to Live Preview →",
+          action: function () {
+            navigate('/Live_Generation');
+            tour.complete();
+          }
+        }
+      ],
+    });
+
+    tour.start();
+    window.history.replaceState({}, document.title, location.pathname);
+
+    return () => {
+      tour.complete();
+      // Clean up spotlight
+      removeSpotlightHighlight(currentSpotlightElement);
+      currentSpotlightElement = null;
+    };
+  }, [selectedPart, navigate, isDarkMode]);
+
+  // Product Tour: Sub Level 3 (Automating Big Conditions)
+  useEffect(() => {
+    if (selectedPart !== 3) return;
+
+    const tour = new Shepherd.Tour({
+      defaultStepOptions: {
+        cancelIcon: { enabled: true },
+        classes: "shadow-md bg-purple-dark",
+        scrollTo: { behavior: "smooth", block: "center" },
+      },
+      useModalOverlay: true,
+      confirmCancel: false,
+      tourName: `level-two-part-two-sublevel3-${Date.now()}`,
+    });
+
+    tour.addStep({
+      id: "introduction",
+      text: `
+        <div class="welcome-message">
+          <strong class="welcome-title">🎉 Excellent work conquering Small Conditions!</strong>
+          <p class="welcome-text">Welcome to Sub Level 3, where you'll master Big Conditions—the powerhouse of document automation! Big Conditions control entire sections or clauses that can completely transform your document structure.</p>
+          <p class="mission-text"><strong>Your mission:</strong> Automate the probationary period clause using round brackets ( ). Ready to unlock advanced conditional logic?</p>
+        </div>
+      `,
+      attachTo: { element: document.body, on: "bottom-start" },
+      classes: "shepherd-theme-custom animate__animated animate__fadeIn",
+      buttons: [{ text: "Start Tour →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "identify-big-conditions",
+      text: `
+        Look at the <strong>PROBATIONARY PERIOD</strong> section near the top of your document. See that entire paragraph wrapped in round brackets like <strong>(The first [Probation Period Length] months of employment will be a probationary period...)</strong>? 
+        Round brackets mark Big Conditions—substantial sections of text that only appear when specific criteria are met. Big conditions give you the power to include or exclude entire clauses, making your documents truly adaptive!
+      `,
+      attachTo: { element: document.body, on: "center" },
+      beforeShowPromise: () => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            // Spotlight the probationary period section
+            currentSpotlightElement = spotlightTextInDocument("(PROBATIONARY PERIOD");
+            resolve();
+          }, 500);
+        });
+      },
+      buttons: [{ text: "Next →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "select-big-condition",
+      text: "Click and highlight the entire probationary period clause wrapped in round brackets. Notice how this selects a much larger block of text than small conditions? Then click the <strong>Verify Selection</strong> button to proceed.",
+      attachTo: { element: document.body, on: "center" },
+      buttons: [
+        {
+          text: "Verify Selection ✅",
+          action: function () {
+            const selection = window.getSelection();
+            const selectedText = selection ? selection.toString().trim() : "";
+            
+            // Check if the selection contains the probationary period content
+            if (selectedText.includes("probationary period") && selectedText.startsWith("(") && selectedText.endsWith(")")) {
+              // Remove spotlight highlighting
+              removeSpotlightHighlight(currentSpotlightElement);
+              currentSpotlightElement = null;
+              tour.next();
+            } else {
+              alert("⚠️ Please select the entire probationary period clause wrapped in round brackets, starting with '(' and ending with ')'.");
+            }
+          },
+        },
+      ],
+    });
+
+    tour.addStep({
+      id: "click-big-condition-button",
+      text: "Now click the <strong>Big Condition</strong> button. Outstanding! You've identified your first major conditional section.",
+      attachTo: { element: "#icon-big-condition", on: "bottom" },
+      buttons: [{ text: "Next →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "navigate-questionnaire",
+      text: `
+        Time to bring this big condition to life! Head to the <strong>Questionnaire</strong> page by clicking <strong>Questionnaire</strong> in the menu bar. 
+        This is where you'll create the controlling question using 'Radio button' options that determines when this entire probationary period section appears in the final document.
+      `,
+      attachTo: { element: "#Questionnaire-button", on: "right" },
+      buttons: [
+        {
+          text: "Go to Questionnaire →",
+          action: function () {
+            navigate('/Questionnaire');
+            tour.complete();
+          }
+        }
+      ],
+    });
+
+    tour.addStep({
+      id: "configure-question",
+      text: `
+        Perfect! You're now in the Big Conditions section of the questionnaire. See the default question: <strong>'Should a probationary period apply to this employment contract?'</strong> 
+        This is a Radio button question with Yes/No options. Here's where the real power shows:
+        <ul>
+          <li>If user selects <strong>YES</strong> → The entire probationary period clause (including all nested placeholders like [Probation Period Length]) appears in the document</li>
+          <li>If user selects <strong>NO</strong> → The entire section disappears, creating a cleaner contract without probationary terms</li>
+        </ul>
+        By DEFAULT, big conditions remain hidden unless explicitly selected to be displayed. Notice how this question controls not just text, but also reveals additional placeholders that users will need to fill when they choose 'Yes'. Feel free to customize this question text for maximum clarity!
+      `,
+      attachTo: { element: document.body, on: "center" },
+      buttons: [{ text: "Next →", action: tour.next }],
+    });
+
+    tour.addStep({
+      id: "test-condition",
+      text: `
+        Let's witness your big condition in action! Switch to the <strong>Live Preview</strong> tab. 
+        Try selecting <strong>Yes</strong> for the 'Should a probationary period apply to this employment contract?' question—watch the entire probationary section materialize in the document on the right! 
+        Notice how it also reveals the [Probation Period Length] placeholder for users to fill. Now select <strong>No</strong>—see how the whole section vanishes, creating a streamlined contract? You've just mastered conditional document architecture that adapts entire contract structures to user needs!
+      `,
+      attachTo: { element: "#live_generation-button", on: "right" },
+      buttons: [
+        {
+          text: "Go to Live Preview →",
+          action: function () {
+            navigate('/Live_Generation');
+            tour.complete();
+          }
+        }
+      ],
+    });
+
+    tour.start();
+    window.history.replaceState({}, document.title, location.pathname);
+
+    return () => {
+      tour.complete();
+      // Clean up spotlight
+      removeSpotlightHighlight(currentSpotlightElement);
+      currentSpotlightElement = null;
+    };
+  }, [selectedPart, navigate, isDarkMode]);
+
+  const getDocumentText = () => {
     return documentRef.current?.textContent || "";
   };
 
@@ -172,45 +611,36 @@ const LevelTwoPart_Two = () => {
     console.log(`Selected text: "${selectedText}"`);
 
     let textWithoutBrackets = selectedText;
+    let hasValidBrackets = false;
     let hasValidSpanClass = false;
-    let fullPlaceholderText: string | null = null;
 
-    // Process the selected text based on its type
     if (selectedText.startsWith("[") && selectedText.endsWith("]")) {
-      textWithoutBrackets = selectedText.slice(1, -1); // Remove [ and ]
+      textWithoutBrackets = selectedText.slice(1, -1);
+      hasValidBrackets = true;
       hasValidSpanClass = true;
     } else if (selectedText.startsWith("{") && selectedText.endsWith("}")) {
-      // For small conditions, remove curly braces and slashes
-      textWithoutBrackets = selectedText
-        .slice(1, -1) // Remove { and }
-        .replace(/^\/|\/$/g, ""); // Remove leading and trailing slashes
+      textWithoutBrackets = selectedText.slice(1, -1);
+      hasValidBrackets = true;
+    } else if (selectedText.startsWith("(") && selectedText.endsWith(")")) {
+      textWithoutBrackets = selectedText.slice(1, -1);
+      hasValidBrackets = true;
     } else {
       const node = selection.anchorNode;
-      if (node && (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE)) {
+      if (node && node.parentElement) {
         const parent = node.parentElement;
-        if (parent) {
-          const classList = Array.from(parent.classList);
-          const placeholderClass = classList.find((cls) => cls.startsWith("placeholder-"));
-          if (placeholderClass) {
-            hasValidSpanClass = true;
-            fullPlaceholderText = parent.textContent || selectedText;
-            textWithoutBrackets = fullPlaceholderText;
-            console.log(`Full placeholder text: ${fullPlaceholderText}`);
-            if (selectedText !== fullPlaceholderText) {
-              console.log(`Selected text "${selectedText}" does not match full placeholder "${fullPlaceholderText}". Aborting.`);
-              isProcessingRef.current = false;
-              return;
-            }
-          }
+        const classList = Array.from(parent.classList);
+        const placeholderClass = classList.find((cls) => cls.startsWith("placeholder-"));
+        if (placeholderClass) {
+          hasValidSpanClass = true;
+          textWithoutBrackets = parent.textContent || selectedText;
         }
       }
     }
 
-    // Relax validation for small and big conditions
     if (
       (label === "Edit PlaceHolder" && !hasValidSpanClass) ||
       (label === "Small Condition" && !(selectedText.startsWith("{") && selectedText.endsWith("}"))) ||
-      (label === "Big Condition" && !selectedText.includes("("))
+      (label === "Big Condition" && !(selectedText.startsWith("(") && selectedText.endsWith(")")))
     ) {
       console.log("Invalid selection for:", label, selectedText);
       isProcessingRef.current = false;
@@ -220,82 +650,62 @@ const LevelTwoPart_Two = () => {
     const isCorrectButton =
       (label === "Edit PlaceHolder" && hasValidSpanClass) ||
       (label === "Small Condition" && selectedText.startsWith("{") && selectedText.endsWith("}")) ||
-      (label === "Big Condition" && selectedText.includes("("));
+      (label === "Big Condition" && selectedText.startsWith("(") && selectedText.endsWith(")"));
 
     if (isCorrectButton) {
       if (label === "Edit PlaceHolder" && !foundPlaceholders.includes(textWithoutBrackets)) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
-          console.log(`Edit PlaceHolder: Setting score to ${newScore}`);
           setLevelTwoScore(newScore);
           return newScore;
         });
         setScoreChange(3);
-        setTimeout(() => {
-          console.log("Resetting scoreChange");
-          setScoreChange(null);
-        }, 1000);
+        setTimeout(() => setScoreChange(null), 1000);
         setFoundPlaceholders((prev) => [...prev, textWithoutBrackets]);
       } else if (label === "Small Condition" && !foundSmallConditions.includes(textWithoutBrackets)) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
-          console.log(`Small Condition: Setting score to ${newScore}`);
           setLevelTwoScore(newScore);
           return newScore;
         });
         setScoreChange(3);
-        setTimeout(() => {
-          console.log("Resetting scoreChange");
-          setScoreChange(null);
-        }, 1000);
+        setTimeout(() => setScoreChange(null), 1000);
         setFoundSmallConditions((prev) => [...prev, textWithoutBrackets]);
       } else if (label === "Big Condition" && !foundBigConditions.includes(textWithoutBrackets)) {
         setScore((prevScore) => {
           const newScore = prevScore + 3;
-          console.log(`Big Condition: Setting score to ${newScore}`);
           setLevelTwoScore(newScore);
           return newScore;
         });
         setScoreChange(3);
-        setTimeout(() => {
-          console.log("Resetting scoreChange");
-          setScoreChange(null);
-        }, 1000);
+        setTimeout(() => setScoreChange(null), 1000);
         setFoundBigConditions((prev) => [...prev, textWithoutBrackets]);
-      } else {
-        console.log(`Already scored for ${label}: ${textWithoutBrackets}`);
       }
     } else {
-      console.log(`Incorrect button for ${label}: Deducting 2 points`);
       setScore((prevScore) => {
         const newScore = Math.max(0, prevScore - 2);
-        console.log(`Incorrect selection: Setting score to ${newScore}`);
         setLevelTwoScore(newScore);
         return newScore;
       });
       setScoreChange(-2);
-      setTimeout(() => {
-        console.log("Resetting scoreChange");
-        setScoreChange(null);
-      }, 1000);
+      setTimeout(() => setScoreChange(null), 1000);
     }
 
     if (label === "Edit PlaceHolder") {
       if (highlightedTexts.includes(textWithoutBrackets)) {
-        console.log("Placeholder already highlighted:", textWithoutBrackets);
         alert("This placeholder has already been added!");
         isProcessingRef.current = false;
         return;
       }
-      console.log("Selected Edit Placeholder:", textWithoutBrackets);
       addHighlightedText(textWithoutBrackets);
-      const bgColor = isDarkMode ? "rgba(255, 245, 157, 0.5)" : "rgba(255, 235, 157, 0.7)";
+      const bgColor = isDarkMode ? "rgba(255, 245, 157, 0.5)" : "rgba(255, 245, 157, 0.7)";
       const span = document.createElement("span");
       span.style.backgroundColor = bgColor;
       span.textContent = selectedText;
       span.className = `placeholder placeholder-${textWithoutBrackets.toLowerCase().replace(/\s+/g, '-')}`;
       range.deleteContents();
       range.insertNode(span);
+      saveHighlightedElement(selectedText, "placeholder", bgColor);
     } else if (label === "Small Condition") {
       if (
         !(selectedText.startsWith("{") && selectedText.endsWith("}")) ||
@@ -314,6 +724,9 @@ const LevelTwoPart_Two = () => {
         !(highlightedTexts.includes(overtimePay) && textWithoutBrackets === overtimeNoPay)
       ) {
         addHighlightedText(textWithoutBrackets);
+        const newTypes = [...selectedTypes, "Radio"];
+        setSelectedTypes(newTypes);
+        sessionStorage.setItem("selectedQuestionTypes_2", JSON.stringify(newTypes));
       }
       const bgColor = isDarkMode ? "rgba(129, 236, 236, 0.5)" : "rgba(129, 236, 236, 0.7)";
       const span = document.createElement("span");
@@ -321,8 +734,13 @@ const LevelTwoPart_Two = () => {
       span.textContent = selectedText;
       range.deleteContents();
       range.insertNode(span);
+      saveHighlightedElement(selectedText, "smallCondition", bgColor);
     } else if (label === "Big Condition") {
-      console.log("Processing Big Condition:", selectedText);
+      if (!(selectedText.startsWith("(") && selectedText.endsWith(")"))) {
+        console.log("Invalid Big Condition selection:", selectedText);
+        isProcessingRef.current = false;
+        return;
+      }
       let clauseContent = textWithoutBrackets;
       const headingsToStrip = ["(PROBATIONARY PERIOD", "(PENSION"];
       let headingUsed = "";
@@ -333,25 +751,24 @@ const LevelTwoPart_Two = () => {
             clauseContent = clauseContent.slice(0, -1).trim();
           }
           headingUsed = heading;
-          console.log(`Stripped heading '${heading}', clauseContent:`, clauseContent);
           break;
         }
       }
 
       if (clauseContent.startsWith("The Employee will be enrolled in the Company's")) {
-        clauseContent =
-          "The Employee will be enrolled in the Company's workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.";
+        clauseContent = "The Employee is enrolled in the Company's workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.";
       }
 
       if (!highlightedTexts.includes(clauseContent)) {
         addHighlightedText(clauseContent);
       }
 
-      const probationClause =
-        "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
-      if (clauseContent === probationClause && !highlightedTexts.includes("Probation Period Length")) {
-        addHighlightedText("Probation Period Length");
-        console.log("Added follow-up question: Probation Period Length");
+      const probationClause = "The first [Probation Period Length] months of employment will be a probationary period. The Company shall assess the Employee's performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
+      if (clauseContent === probationClause && !highlightedTexts.includes("[Probation Period Length]")) {
+        addHighlightedText("[Probation Period Length]");
+        const newTypes = [...selectedTypes, "Text"];
+        setSelectedTypes(newTypes);
+        sessionStorage.setItem("selectedQuestionTypes_2", JSON.stringify(newTypes));
       }
 
       const bgColor = isDarkMode ? "rgba(186, 220, 88, 0.5)" : "rgba(186, 220, 88, 0.7)";
@@ -395,6 +812,7 @@ const LevelTwoPart_Two = () => {
         isProcessingRef.current = false;
         return;
       }
+      saveHighlightedElement(selectedText, "bigCondition", bgColor);
       selection.removeAllRanges();
     }
 
@@ -527,17 +945,27 @@ const LevelTwoPart_Two = () => {
           >
             {[...new Set(highlightedTexts)].map((text, index) => {
               const { primaryValue } = determineQuestionType(text);
-              // Fallback to explicit mapping if determineQuestionType doesn't provide a primaryValue
               const displayText = primaryValue || smallConditionToQuestionMap[text] || text;
               const questionType = selectedTypes[index] || "Text";
               return (
-                <li key={index} className="flex items-center justify-between">
-                  <div>
+                <li
+                  id={`selected-placeholder${index}`}
+                  key={`${text}-${index}`}
+                  className={`flex items-center justify-between p-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1 ${
+                    isDarkMode
+                      ? "text-teal-200 bg-gray-600/80 hover:bg-gray-500/70"
+                      : "text-teal-800 bg-white/80 hover:bg-teal-100/70"
+                  }`}
+                >
+                  <div className="flex items-center">
                     <span
-                      className={`text-sm font-medium truncate max-w-xs ${
-                        isDarkMode ? "text-teal-200" : "text-teal-900"
+                      className={`mr-3 text-lg ${
+                        isDarkMode ? "text-cyan-400" : "text-cyan-500"
                       }`}
                     >
+                      ✓
+                    </span>
+                    <span className="text-sm font-medium truncate max-w-xs">
                       {displayText}
                     </span>
                   </div>
@@ -575,9 +1003,7 @@ const LevelTwoPart_Two = () => {
           <div className="mt-5 text-right">
             <span
               className={`text-sm px-3 py-1 rounded-full ${
-                isDarkMode
-                  ? "text-teal-300 bg-gray-600/50"
-                  : "text-teal-600 bg-teal-200/50"
+                isDarkMode ? "text-teal-300 bg-gray-600/50" : "text-teal-600 bg-teal-200/50"
               }`}
             >
               Total Placeholders: {[...new Set(highlightedTexts)].length}
@@ -600,7 +1026,7 @@ const LevelTwoPart_Two = () => {
           highlightedTexts={highlightedTexts}
           isDarkMode={isDarkMode}
         />
-        <CrispChat websiteId={""} />
+        <CrispChat websiteId="" />
       </div>
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
         <div className="flex gap-2">
@@ -621,6 +1047,3 @@ const LevelTwoPart_Two = () => {
 };
 
 export default LevelTwoPart_Two;
-
-
-// latest code

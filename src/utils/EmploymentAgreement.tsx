@@ -164,7 +164,7 @@ const EmploymentAgreement: React.FC = () => {
           Employee's primary duties shall include{" "}
           <span className="placeholder-duties">Brief Description of Duties</span>.{" "}
           {"{"}The Employee may be required to perform additional duties as
-          reasonably assigned by the Company.{"}"}
+          reasonably assigned by the Company{"}"}.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">PLACE OF WORK</h2>
