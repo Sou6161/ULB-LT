@@ -43,6 +43,7 @@ export const dateTypes: { [key: string]: string } = {
 };
 
 export const radioTypes: { [key: string]: string } = {
+  "(PROBATIONARY PERIOD The first Probation Period Length months of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.) (Optional Clause)": "Is the clause of probationary period applicable?",
   "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.": "Is the clause of probationary period applicable?",
   "The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.": "Is the Pension clause applicable?",
   'or, if applicable, "on [Previous Employment Start Date] with previous continuous service taken into account"': "Is the previous service applicable?",
