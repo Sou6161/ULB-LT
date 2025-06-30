@@ -6,17 +6,20 @@ import {
   FaRegLightbulb,
   FaPuzzlePiece,
   FaSignOutAlt,
-  FaUser
+  FaUser,
+  FaLock,
 } from "react-icons/fa";
 import { GrDocumentConfig } from "react-icons/gr";
 import { GiLevelThreeAdvanced } from "react-icons/gi";
 import { LuBrain } from "react-icons/lu";
 import { BsMoonStarsFill, BsSunFill } from "react-icons/bs";
-import { useNavigate } from "react-router-dom";
-import { auth } from "./firebase"; // Import the auth object from your firebase file
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
 import Header from "./Header";
 import { useScore } from "../context/ScoreContext";
+import { useHighlightedText } from '../context/HighlightedTextContext';
+import { useQuestionType } from '../context/QuestionTypeContext';
 
 interface LevelProps {
   title: string;
@@ -31,11 +34,18 @@ interface LevelProps {
 interface CustomDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectPart: (part: string, isDemo?: boolean) => void; // Add isDemo param
+  onSelectPart: (part: string, isDemo?: boolean, isNDA?: boolean) => void;
   isDarkMode: boolean;
 }
 
-// Logout confirmation dialog component
+interface AgreementDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectAgreement: (agreement: string) => void;
+  isDarkMode: boolean;
+  isNDALevelCompleted: boolean;
+}
+
 interface LogoutDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,18 +63,25 @@ const LogoutDialog: React.FC<LogoutDialogProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-      <div 
+      <div
         className={`rounded-2xl w-full max-w-md mx-4 transform transition-all duration-300 ease-out animate-scale-in ${
           isDarkMode ? "bg-gray-900" : "bg-white"
         }`}
         style={{
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         }}
       >
-        {/* Header */}
-        <div className={`p-6 border-b ${isDarkMode ? "border-gray-800" : "border-gray-100"}`}>
+        <div
+          className={`p-6 border-b ${
+            isDarkMode ? "border-gray-800" : "border-gray-100"
+          }`}
+        >
           <div className="flex justify-between items-center">
-            <h3 className={`text-2xl font-bold ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
+            <h3
+              className={`text-2xl font-bold ${
+                isDarkMode ? "text-gray-100" : "text-gray-800"
+              }`}
+            >
               Confirm Logout
             </h3>
             <button
@@ -74,23 +91,28 @@ const LogoutDialog: React.FC<LogoutDialogProps> = ({
               }`}
               aria-label="Close dialog"
             >
-              <FaTimes className={`${isDarkMode ? "text-gray-300 hover:text-gray-100" : "text-gray-400 hover:text-gray-600"} text-xl`} />
+              <FaTimes
+                className={`${
+                  isDarkMode
+                    ? "text-gray-300 hover:text-gray-100"
+                    : "text-gray-400 hover:text-gray-600"
+                } text-xl`}
+              />
             </button>
           </div>
         </div>
-
-        {/* Content */}
         <div className="p-6">
-          <p className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-6`}>
+          <p
+            className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-6`}
+          >
             Are you sure you want to log out of your account?
           </p>
-          
           <div className="flex justify-end space-x-4">
             <button
               onClick={onClose}
               className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                isDarkMode 
-                  ? "bg-gray-800 text-gray-300 hover:bg-gray-700" 
+                isDarkMode
+                  ? "bg-gray-800 text-gray-300 hover:bg-gray-700"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
@@ -109,6 +131,162 @@ const LogoutDialog: React.FC<LogoutDialogProps> = ({
   );
 };
 
+const AgreementDialog: React.FC<AgreementDialogProps> = ({
+  isOpen,
+  onClose,
+  onSelectAgreement,
+  isDarkMode,
+  isNDALevelCompleted,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+      <div
+        className={`rounded-2xl w-full max-w-md mx-4 transform transition-all duration-300 ease-out animate-scale-in ${
+          isDarkMode ? "bg-gray-900" : "bg-white"
+        }`}
+        style={{
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        }}
+      >
+        <div
+          className={`p-6 border-b ${
+            isDarkMode ? "border-gray-800" : "border-gray-100"
+          }`}
+        >
+          <div className="flex justify-between items-center">
+            <h3
+              className={`text-2xl font-bold ${
+                isDarkMode ? "text-gray-100" : "text-gray-800"
+              }`}
+            >
+              Select Agreement
+            </h3>
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-full transition-colors duration-200 ${
+                isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-100"
+              }`}
+              aria-label="Close dialog"
+            >
+              <FaTimes
+                className={`${
+                  isDarkMode
+                    ? "text-gray-300 hover:text-gray-100"
+                    : "text-gray-400 hover:text-gray-600"
+                } text-xl`}
+              />
+            </button>
+          </div>
+          <p
+            className={`${isDarkMode ? "text-gray-400" : "text-gray-500"} mt-2`}
+          >
+            Choose an agreement to automate
+          </p>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 gap-4">
+            <button
+              onClick={() => onSelectAgreement("nda")}
+              className={`group relative flex items-center p-4 rounded-xl transition-all duration-300 ${
+                isDarkMode
+                  ? "bg-gradient-to-r from-blue-900/50 to-blue-800/50 hover:from-blue-800 hover:to-blue-700"
+                  : "bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200"
+              }`}
+              aria-label="Select NDA Agreement"
+            >
+              <div
+                className={`${
+                  isDarkMode ? "bg-blue-700" : "bg-blue-500"
+                } p-3 rounded-lg shadow-md`}
+              >
+                <FaFileAlt className="text-white text-xl" />
+              </div>
+              <div className="ml-4 text-left">
+                <h4
+                  className={`text-lg font-semibold ${
+                    isDarkMode ? "text-blue-200" : "text-blue-900"
+                  }`}
+                >
+                  NDA Agreement
+                </h4>
+                <p
+                  className={`${
+                    isDarkMode ? "text-blue-400" : "text-blue-600"
+                  } text-sm`}
+                >
+                  Automate Non-Disclosure Agreement
+                </p>
+              </div>
+              <FaChevronRight
+                className={`absolute right-4 ${
+                  isDarkMode
+                    ? "text-blue-400 group-hover:text-blue-300"
+                    : "text-blue-400 group-hover:text-blue-600"
+                } group-hover:transform group-hover:translate-x-1 transition-all`}
+              />
+            </button>
+            <button
+              onClick={() => onSelectAgreement("employment")}
+              className={`group relative flex items-center p-4 rounded-xl transition-all duration-300 ${
+                isDarkMode
+                  ? "bg-gradient-to-r from-green-900/50 to-lime-800/50 hover:from-green-800 hover:to-lime-700"
+                  : "bg-gradient-to-r from-green-50 to-green-100 hover:from-lime-100 hover:to-lime-200"
+              }`}
+              aria-label="Select Employment Agreement"
+            >
+              <div
+                className={`${
+                  isDarkMode ? "bg-lime-700" : "bg-lime-500"
+                } p-3 rounded-lg shadow-md`}
+              >
+                <FaPuzzlePiece className="text-white text-xl" />
+              </div>
+              <div className="ml-4 text-left">
+                <h4
+                  className={`text-lg font-semibold ${
+                    isDarkMode ? "text-lime-200" : "text-lime-900"
+                  }`}
+                >
+                  Employment Agreement
+                </h4>
+                <p
+                  className={`${
+                    isDarkMode ? "text-lime-400" : "text-lime-600"
+                  } text-sm`}
+                >
+                  Automate Employment Agreement
+                </p>
+              </div>
+              <FaChevronRight
+                className={`absolute right-4 ${
+                  isDarkMode
+                    ? "text-lime-400 group-hover:text-lime-300"
+                    : "text-lime-400 group-hover:text-lime-600"
+                } group-hover:transform group-hover:translate-x-1 transition-all`}
+              />
+            </button>
+          </div>
+        </div>
+        <div
+          className={`p-6 rounded-b-2xl ${
+            isDarkMode ? "bg-gray-800" : "bg-gray-50"
+          }`}
+        >
+          <p
+            className={`text-sm text-center ${
+              isDarkMode ? "text-gray-400" : "text-gray-500"
+            }`}
+          >
+            You can switch between agreements later
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CustomDialog: React.FC<CustomDialogProps> = ({
   isOpen,
   onClose,
@@ -118,30 +296,37 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
   const { levelTwoScore } = useScore();
   if (!isOpen) return null;
 
-  const handlePartSelect = (partNumber: number) => {
+  const handlePartSelect = (partNumber: number, isNDA: boolean = false) => {
     localStorage.setItem("selectedPart", partNumber.toString());
     console.log("Saved part:", partNumber);
     if (partNumber === 4) {
-      onSelectPart("two-demo");
+      onSelectPart("two-demo", true, isNDA);
     } else {
-      onSelectPart("two");
+      onSelectPart("two", false, isNDA);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-      <div 
+      <div
         className={`rounded-2xl w-full max-w-lg mx-4 transform transition-all duration-300 ease-out animate-scale-in ${
           isDarkMode ? "bg-gray-900" : "bg-white"
         }`}
         style={{
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         }}
       >
-        {/* Header */}
-        <div className={`p-6 border-b ${isDarkMode ? "border-gray-800" : "border-gray-100"}`}>
+        <div
+          className={`p-6 border-b ${
+            isDarkMode ? "border-gray-800" : "border-gray-100"
+          }`}
+        >
           <div className="flex justify-between items-center">
-            <h3 className={`text-2xl font-bold ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
+            <h3
+              className={`text-2xl font-bold ${
+                isDarkMode ? "text-gray-100" : "text-gray-800"
+              }`}
+            >
               Choose Your Path
             </h3>
             <button
@@ -151,20 +336,25 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
               }`}
               aria-label="Close dialog"
             >
-              <FaTimes className={`${isDarkMode ? "text-gray-300 hover:text-gray-100" : "text-gray-400 hover:text-gray-600"} text-xl`} />
+              <FaTimes
+                className={`${
+                  isDarkMode
+                    ? "text-gray-300 hover:text-gray-100"
+                    : "text-gray-400 hover:text-gray-600"
+                } text-xl`}
+              />
             </button>
           </div>
-          <p className={`${isDarkMode ? "text-gray-400" : "text-gray-500"} mt-2`}>
+          <p
+            className={`${isDarkMode ? "text-gray-400" : "text-gray-500"} mt-2`}
+          >
             Select which part you'd like to explore
           </p>
         </div>
-
-        {/* Content */}
         <div className="p-6">
           <div className="grid grid-cols-1 gap-4">
-            {/* Part One Button */}
             <button
-              onClick={() => onSelectPart("one")}
+              onClick={() => onSelectPart("one", false)}
               className={`group relative flex items-center p-4 rounded-xl transition-all duration-300 ${
                 isDarkMode
                   ? "bg-gradient-to-r from-blue-900/50 to-blue-800/50 hover:from-blue-800 hover:to-blue-700"
@@ -172,48 +362,76 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
               }`}
               aria-label="Select Part One"
             >
-              <div className={`${isDarkMode ? "bg-blue-700" : "bg-blue-500"} p-3 rounded-lg shadow-md`}>
+              <div
+                className={`${
+                  isDarkMode ? "bg-blue-700" : "bg-blue-500"
+                } p-3 rounded-lg shadow-md`}
+              >
                 <FaRegLightbulb className="text-white text-xl" />
               </div>
               <div className="ml-4 text-left">
-                <h4 className={`text-lg font-semibold ${isDarkMode ? "text-blue-200" : "text-blue-900"}`}>
-                  Part One
+                <h4
+                  className={`text-lg font-semibold ${
+                    isDarkMode ? "text-blue-200" : "text-blue-900"
+                  }`}
+                >
+                  Return to Beginner Quest
                 </h4>
-                <p className={`${isDarkMode ? "text-blue-400" : "text-blue-600"} text-sm`}>
+                <p
+                  className={`${
+                    isDarkMode ? "text-blue-400" : "text-blue-600"
+                  } text-sm`}
+                >
                   Match The Following
                 </p>
               </div>
-              <FaChevronRight className={`absolute right-4 ${
-                isDarkMode ? "text-blue-400 group-hover:text-blue-300" : "text-blue-400 group-hover:text-blue-600"
-              } group-hover:transform group-hover:translate-x-1 transition-all`} />
+              <FaChevronRight
+                className={`absolute right-4 ${
+                  isDarkMode
+                    ? "text-blue-400 group-hover:text-blue-300"
+                    : "text-blue-400 group-hover:text-blue-600"
+                } group-hover:transform group-hover:translate-x-1 transition-all`}
+              />
             </button>
-
-            {/* Part Two [Demo] Button */}
             <button
-              onClick={() => handlePartSelect(4)}
+              onClick={() => handlePartSelect(4, true)}
               className={`group relative flex items-center p-4 rounded-xl transition-all duration-300 ${
                 isDarkMode
                   ? "bg-gradient-to-r from-green-900/50 to-lime-800/50 hover:from-green-800 hover:to-lime-700"
                   : "bg-gradient-to-r from-green-50 to-green-100 hover:from-lime-100 hover:to-lime-200"
               }`}
             >
-              <div className={`${isDarkMode ? "bg-lime-700" : "bg-lime-500"} p-3 rounded-lg`}>
+              <div
+                className={`${
+                  isDarkMode ? "bg-lime-700" : "bg-lime-500"
+                } p-3 rounded-lg`}
+              >
                 <FaPuzzlePiece className="text-white text-xl" />
               </div>
               <div className="ml-4 text-left">
-                <h4 className={`text-lg font-semibold ${isDarkMode ? "text-lime-200" : "text-lime-900"}`}>
-                  Part Two [Demo]
+                <h4
+                  className={`text-lg font-semibold ${
+                    isDarkMode ? "text-lime-200" : "text-lime-900"
+                  }`}
+                >
+                  Automation Quest: Demo Challenge
                 </h4>
-                <p className={`${isDarkMode ? "text-lime-400" : "text-lime-600"} text-sm`}>
-                  Automate Employment Agreement
+                <p
+                  className={`${
+                    isDarkMode ? "text-lime-400" : "text-lime-600"
+                  } text-sm`}
+                >
+                  Automate Non-Disclosure Agreement
                 </p>
               </div>
-              <FaChevronRight className={`absolute right-4 ${
-                isDarkMode ? "text-lime-400 group-hover:text-lime-300" : "text-lime-400 group-hover:text-lime-600"
-              } group-hover:transform group-hover:translate-x-1 transition-all`} />
+              <FaChevronRight
+                className={`absolute right-4 ${
+                  isDarkMode
+                    ? "text-lime-400 group-hover:text-lime-300"
+                    : "text-lime-400 group-hover:text-lime-600"
+                } group-hover:transform group-hover:translate-x-1 transition-all`}
+              />
             </button>
-            
-            {/* Part Two Button */}
             <div className="relative group">
               <button
                 className={`w-full group relative flex items-center p-4 rounded-xl transition-all duration-300 ${
@@ -223,59 +441,84 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
                 }`}
                 aria-label="Select Part Two"
               >
-                <div className={`${isDarkMode ? "bg-lime-700" : "bg-lime-500"} p-3 rounded-lg shadow-md`}>
+                <div
+                  className={`${
+                    isDarkMode ? "bg-lime-700" : "bg-lime-500"
+                  } p-3 rounded-lg shadow-md`}
+                >
                   <FaPuzzlePiece className="text-white text-xl" />
                 </div>
                 <div className="ml-4 text-left">
-                  <h4 className={`text-lg font-semibold ${isDarkMode ? "text-lime-200" : "text-lime-900"}`}>
-                    Part Two
+                  <h4
+                    className={`text-lg font-semibold ${
+                      isDarkMode ? "text-lime-200" : "text-lime-900"
+                    }`}
+                  >
+                    Automation Quest: Core Challenges
                   </h4>
-                  <p className={`${isDarkMode ? "text-lime-400" : "text-lime-600"} text-sm`}>
-                    Automate Employment Agreement
+                  <p
+                    className={`${
+                      isDarkMode ? "text-lime-400" : "text-lime-600"
+                    } text-sm`}
+                  >
+                    Automate Non-Disclosure Agreement
                   </p>
                 </div>
-                <FaChevronRight className={`absolute right-4 ${
-                  isDarkMode ? "text-lime-400 group-hover:text-lime-300" : "text-lime-400 group-hover:text-lime-600"
-                } group-hover:transform group-hover:translate-x-1 transition-all`} />
+                <FaChevronRight
+                  className={`absolute right-4 ${
+                    isDarkMode
+                      ? "text-lime-400 group-hover:text-lime-300"
+                      : "text-lime-400 group-hover:text-lime-600"
+                    } group-hover:transform group-hover:translate-x-1 transition-all`}
+                />
               </button>
-
-              {/* Hover Section with Buttons */}
               <div className="absolute left-full top-0 ml-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300 z-10">
-                <div className={`p-4 rounded-xl shadow-lg w-64 ${
-                  isDarkMode ? "bg-gray-800" : "bg-white"
-                }`}>
-                  <button className="w-full p-2 mb-2 rounded-lg bg-lime-600 text-white hover:bg-lime-700" onClick={() => handlePartSelect(1)}>
-                    Part 1: Automating Placeholders
-                  </button>
-                  <button 
-                    className={`w-full p-2 mb-2 rounded-lg ${
-                      levelTwoScore < 0   // change this to actual level 2 score for passing
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-lime-600 text-white hover:bg-lime-700"
-                    }`}
-                    onClick={() => levelTwoScore >= 0 && handlePartSelect(2)}
+                <div
+                  className={`p-4 rounded-xl shadow-lg w-64 ${
+                    isDarkMode ? "bg-gray-800" : "bg-white"
+                  }`}
+                >
+                  <button
+                    className="w-full p-2 mb-2 rounded-lg bg-lime-600 text-white hover:bg-lime-700"
+                    onClick={() => handlePartSelect(1, true)}
                   >
-                    Part 2: Automating Small Conditions
+                    Challenge 1: Master Placeholders
                   </button>
-                  <button 
+                  <button
                     className={`w-full p-2 mb-2 rounded-lg ${
                       levelTwoScore < 0
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-lime-600 text-white hover:bg-lime-700"
                     }`}
-                    onClick={() => levelTwoScore >= 0 && handlePartSelect(3)}
+                    onClick={() => levelTwoScore >= 0 && handlePartSelect(2, true)}
                   >
-                    Part 3: Automating big Conditions
+                    Challenge 2: Small Conditions
+                  </button>
+                  <button
+                    className={`w-full p-2 mb-2 rounded-lg ${
+                      levelTwoScore < 0
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-lime-600 text-white hover:bg-lime-700"
+                    }`}
+                    onClick={() => levelTwoScore >= 0 && handlePartSelect(3, true)}
+                  >
+                    Challenge 3: Big Conditions
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className={`p-6 rounded-b-2xl ${isDarkMode ? "bg-gray-800" : "bg-gray-50"}`}>
-          <p className={`text-sm text-center ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+        <div
+          className={`p-6 rounded-b-2xl ${
+            isDarkMode ? "bg-gray-800" : "bg-gray-50"
+          }`}
+        >
+          <p
+            className={`text-sm text-center ${
+              isDarkMode ? "text-gray-400" : "text-gray-500"
+            }`}
+          >
             You can always switch between parts later
           </p>
         </div>
@@ -283,6 +526,25 @@ const CustomDialog: React.FC<CustomDialogProps> = ({
     </div>
   );
 };
+
+// Utility to clear all relevant questionnaire and placeholder state
+function clearAgreementState() {
+  localStorage.removeItem('ndaQuestionnaireState');
+  localStorage.removeItem('scoredQuestions');
+  localStorage.removeItem('selectedQuestionTypes');
+  localStorage.removeItem('questionOrder_2');
+  localStorage.removeItem('userAnswers');
+  localStorage.removeItem('level');
+  localStorage.removeItem('selectedQuestionTypes_2');
+  localStorage.removeItem('typeChangedStates_2');
+  localStorage.removeItem('levelTwoPartTwoState');
+  localStorage.removeItem('highlightedTexts');
+  localStorage.removeItem('foundPlaceholders');
+  localStorage.removeItem('foundSmallConditions');
+  localStorage.removeItem('foundBigConditions');
+  localStorage.removeItem('questionnaireState');
+  sessionStorage.clear();
+}
 
 const LevelCard: React.FC<LevelProps & { isDarkMode: boolean }> = ({
   title,
@@ -295,33 +557,73 @@ const LevelCard: React.FC<LevelProps & { isDarkMode: boolean }> = ({
   isDarkMode,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showDialog, setShowDialog] = useState(false);
+  const [showAgreementDialog, setShowAgreementDialog] = useState(false);
+  const [isNDALevelCompleted, setIsNDALevelCompleted] = useState(() => {
+    return localStorage.getItem("isNDALevelCompleted") === "true";
+  });
+  const { setHighlightedTexts } = useHighlightedText();
+  const {
+    setSelectedTypes,
+    setEditedQuestions,
+    setRequiredQuestions,
+    setFollowUpQuestions,
+    setQuestionOrder
+  } = useQuestionType();
+  const { resetAllScores } = useScore();
+
+  // Check for NDA completion and show CustomDialog if just completed
+  useEffect(() => {
+    const justCompletedNDA = location.state?.justCompletedNDA;
+    if (justCompletedNDA && isNDALevelCompleted) {
+      setShowDialog(true);
+      // Clear the state to prevent re-triggering
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, isNDALevelCompleted, navigate]);
+
+  useEffect(() => {
+    // Update localStorage when isNDALevelCompleted changes
+    localStorage.setItem("isNDALevelCompleted", String(isNDALevelCompleted));
+  }, [isNDALevelCompleted]);
 
   const handleStartLevel = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent triggering parent onClick
+    e.stopPropagation();
     if (isLevel2) {
-      setShowDialog(true);
+      setShowAgreementDialog(true);
     } else {
       navigate(link);
     }
   };
 
-  const handleSelectPart = (part: string, isDemo?: boolean) => {
+  const handleSelectAgreement = (agreement: string) => {
+    clearAgreementState(); // Clear persistent state
+    setHighlightedTexts([]); // Clear in-memory/context state for placeholders
+    setSelectedTypes([]); // Clear in-memory/context state for question types
+    setEditedQuestions([]);
+    setRequiredQuestions([]);
+    setFollowUpQuestions([]);
+    setQuestionOrder([]);
+    resetAllScores(); // Reset the score
+    setShowAgreementDialog(false);
+    setShowDialog(true); // Show Choose Your Path for both NDA and Employment Agreements
+    localStorage.setItem("selectedAgreement", agreement); // Store the selected agreement
+  };
+
+  const handleSelectPart = (part: string, isDemo: boolean = false, isNDA: boolean = false) => {
     setShowDialog(false);
+    const agreement = localStorage.getItem("selectedAgreement") || "employment";
     if (part === "one") {
       navigate("/Level-Two-Part-One");
-    } else if (part === "two") {
-      navigate("/Level-Two-Part-Two", { 
-        state: { 
-          startTour: isDemo || false 
-        } 
-      });
-    } else {
-      navigate("/Level-Two-Part-Two-Demo", { 
-        state: { 
-          startTour: isDemo || false 
-        } 
+    } else if (part === "two" || part === "two-demo") {
+      const basePath = isNDA ? "/NDA_LevelTwoPart_Two" : "/Level-Two-Part-Two";
+      const demoPath = isNDA ? "/NDA_LevelTwoPart_Two-Demo" : "/Level-Two-Part-Two-Demo";
+      navigate(isDemo ? demoPath : basePath, {
+        state: {
+          startTour: isDemo,
+        },
       });
     }
   };
@@ -348,7 +650,7 @@ const LevelCard: React.FC<LevelProps & { isDarkMode: boolean }> = ({
         tabIndex={0}
         aria-pressed={active}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             onClick();
           }
         }}
@@ -405,50 +707,63 @@ const LevelCard: React.FC<LevelProps & { isDarkMode: boolean }> = ({
               } transform hover:translate-y-px hover:shadow-xl`}
               aria-label={`Start ${title} level`}
             >
-              Start Level
+              Start Quest
             </button>
           </div>
         )}
       </div>
 
+      <AgreementDialog
+        isOpen={showAgreementDialog}
+        onClose={() => setShowAgreementDialog(false)}
+        onSelectAgreement={handleSelectAgreement}
+        isDarkMode={isDarkMode}
+        isNDALevelCompleted={isNDALevelCompleted}
+      />
+
       <CustomDialog
         isOpen={showDialog}
         onClose={() => setShowDialog(false)}
-        onSelectPart={handleSelectPart}
+        onSelectPart={(part, isDemo) =>
+          handleSelectPart(
+            part,
+            isDemo,
+            localStorage.getItem("selectedAgreement") === "nda"
+          )
+        }
         isDarkMode={isDarkMode}
       />
     </>
   );
 };
 
-// Define levels data outside the component to avoid recreation on each render
 const levelsData = [
   {
-    title: "Simple Quiz",
+    title: "Beginner Quest",
     description:
-      "Test your basic knowledge of contract management with a quick and engaging quiz.",
+      "Embark on your CLM journey with a quick quiz to test your basics.",
     Icon: FaFileAlt,
     link: "/Level-One-Design",
   },
   {
-    title: "Document Automation Basics",
+    title: "Automation Quest",
     description:
-      "Learn the essentials of automating employment agreements with placeholders and conditional logic.",
+      "Take on the challenge of automating agreements with placeholders and logic.",
     Icon: GrDocumentConfig,
     link: "/Level-Two",
     isLevel2: true,
   },
   {
-    title: "Advanced Document Automation",
+    title: "Advanced Quest",
     description:
-      "Dive deeper into automating complex documents with advanced techniques and logic.",
+      "Conquer advanced automation techniques in this challenging quest.",
     Icon: GiLevelThreeAdvanced,
     link: "/Level-Three-Quiz",
   },
   {
-    title: "CLM Workflows",
+    title: "Workflow Quest",
     description:
-      "Explore contract lifecycle management by designing and optimizing real-world workflows.",
+      "Master contract workflows by completing real-world challenges.",
     Icon: LuBrain,
     link: "/Level-Four-Quiz",
   },
@@ -462,66 +777,62 @@ const Dashboard: React.FC = () => {
   const [userName, setUserName] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const levels = useMemo(() => levelsData, []);
+  const { setHighlightedTexts } = useHighlightedText();
+  useQuestionType();
+  const { resetAllScores } = useScore();
 
-  // Avoid clearing sessionStorage unnecessarily to preserve state for other components
   useEffect(() => {
-    console.log("Navigated to Dashboard. Preserving questionnaireState in localStorage.");
-    // Optionally clear specific sessionStorage keys if necessary
-    // For example, clear only user answers or temporary states, but keep levelTwoPartTwoState
-  }, []);
+    console.log(
+      "Navigated to Dashboard. Preserving questionnaireState in localStorage."
+    );
+  }, []); 
 
-  // Load dark mode preference from localStorage
   useEffect(() => {
-    // Check for user's preferred color scheme
-    const prefersDarkMode = window.matchMedia && 
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    // First check localStorage, then fallback to system preference
-    const savedDarkMode = localStorage.getItem('darkMode');
-    const initialDarkMode = savedDarkMode !== null 
-      ? savedDarkMode === 'true' 
-      : prefersDarkMode;
-      
+    const prefersDarkMode =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const savedDarkMode = localStorage.getItem("darkMode");
+    const initialDarkMode =
+      savedDarkMode !== null ? savedDarkMode === "true" : prefersDarkMode;
     setIsDarkMode(initialDarkMode);
-    
-    // Get user info from auth
+
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        // Use displayName if available, otherwise fallback to the first part of the email or 'User'
-        setUserName(user.displayName || user.email?.split('@')[0] || 'User');
+        setUserName(user.displayName || user.email?.split("@")[0] || "User");
       } else {
-        // If no user is logged in, redirect to login
-        navigate('/login');
+        navigate("/login");
       }
     });
-    
-    // Listen for system color scheme changes
-    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const darkModeMediaQuery = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    );
     const handleColorSchemeChange = (e: MediaQueryListEvent) => {
-      // Only update if user hasn't set a preference in localStorage
-      if (localStorage.getItem('darkMode') === null) {
+      if (localStorage.getItem("darkMode") === null) {
         setIsDarkMode(e.matches);
       }
     };
-    
+
     if (darkModeMediaQuery.addEventListener) {
-      darkModeMediaQuery.addEventListener('change', handleColorSchemeChange);
+      darkModeMediaQuery.addEventListener("change", handleColorSchemeChange);
     }
-    
-    // Close mobile menu when window is resized to desktop size
+
     const handleResize = () => {
       if (window.innerWidth >= 768 && isMenuOpen) {
         setIsMenuOpen(false);
       }
     };
-    
-    window.addEventListener('resize', handleResize);
-    
+
+    window.addEventListener("resize", handleResize);
+
     return () => {
       unsubscribe();
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       if (darkModeMediaQuery.removeEventListener) {
-        darkModeMediaQuery.removeEventListener('change', handleColorSchemeChange);
+        darkModeMediaQuery.removeEventListener(
+          "change",
+          handleColorSchemeChange
+        );
       }
     };
   }, [navigate, isMenuOpen]);
@@ -533,14 +844,14 @@ const Dashboard: React.FC = () => {
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
-    localStorage.setItem('darkMode', String(newMode));
+    localStorage.setItem("darkMode", String(newMode));
   };
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem('token');
-      navigate('/login');
+      localStorage.removeItem("token");
+      navigate("/login");
     } catch (error) {
       console.error("Error signing out: ", error);
     } finally {
@@ -560,8 +871,7 @@ const Dashboard: React.FC = () => {
           : "bg-gradient-to-br from-yellow-100 via-blue-100 to-lime-100"
       }`}
     >
-      {/* Improved Navbar */}
-      <nav 
+      <nav
         className={`w-full transition-all duration-300 fixed top-0 left-0 z-40 ${
           isDarkMode ? "bg-gray-900/90" : "bg-white/90"
         } backdrop-blur-md border-b ${
@@ -570,32 +880,32 @@ const Dashboard: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
-            {/* Logo and Brand */}
             <div className="flex-shrink-0 flex items-center">
               <Header isDarkMode={isDarkMode} />
             </div>
-            
-            {/* Desktop Menu */}
             <div className="hidden md:flex items-center justify-end space-x-4 lg:space-x-6">
-              {/* User Profile - Desktop */}
               {userName && (
                 <div className="flex items-center space-x-2 px-2">
-                  <div className={`flex items-center justify-center h-8 w-8 rounded-full ${
-                    isDarkMode ? "bg-teal-800" : "bg-teal-100"
-                  }`}>
-                    <FaUser className={`${
-                      isDarkMode ? "text-teal-300" : "text-teal-600"
-                    } text-sm`} />
+                  <div
+                    className={`flex items-center justify-center h-8 w-8 rounded-full ${
+                      isDarkMode ? "bg-teal-800" : "bg-teal-100"
+                    }`}
+                  >
+                    <FaUser
+                      className={`${
+                        isDarkMode ? "text-teal-300" : "text-teal-600"
+                      } text-sm`}
+                    />
                   </div>
-                  <span className={`font-medium ${
-                    isDarkMode ? "text-gray-300" : "text-gray-700"
-                  }`}>
+                  <span
+                    className={`font-medium ${
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
                     {userName}
                   </span>
                 </div>
               )}
-              
-              {/* Theme Toggle - Desktop */}
               <button
                 onClick={toggleDarkMode}
                 className={`p-2 rounded-full shadow-md transition-all duration-300 ${
@@ -603,8 +913,12 @@ const Dashboard: React.FC = () => {
                     ? "bg-gray-800 text-yellow-300 hover:bg-gray-700"
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                 }`}
-                aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-                title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label={
+                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
+                title={
+                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
               >
                 {isDarkMode ? (
                   <BsSunFill className="text-lg" />
@@ -612,8 +926,6 @@ const Dashboard: React.FC = () => {
                   <BsMoonStarsFill className="text-lg" />
                 )}
               </button>
-              
-              {/* Logout Button - Desktop */}
               <button
                 onClick={() => setShowLogoutDialog(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md transition-all duration-300 bg-gradient-to-r from-rose-500 to-red-500 text-white hover:shadow-lg hover:from-rose-600 hover:to-red-600 transform hover:translate-y-px"
@@ -624,10 +936,7 @@ const Dashboard: React.FC = () => {
                 <span>Logout</span>
               </button>
             </div>
-            
-            {/* Mobile menu button */}
             <div className="md:hidden flex items-center space-x-2">
-              {/* Theme Toggle - Small Mobile */}
               <button
                 onClick={toggleDarkMode}
                 className={`p-2 rounded-full shadow-md transition-all duration-300 ${
@@ -635,7 +944,9 @@ const Dashboard: React.FC = () => {
                     ? "bg-gray-800 text-yellow-300 hover:bg-gray-700"
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                 }`}
-                aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label={
+                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
               >
                 {isDarkMode ? (
                   <BsSunFill className="text-sm" />
@@ -643,8 +954,6 @@ const Dashboard: React.FC = () => {
                   <BsMoonStarsFill className="text-sm" />
                 )}
               </button>
-
-              {/* Logout Button - Small Mobile */}
               <button
                 onClick={() => setShowLogoutDialog(true)}
                 className={`p-2 rounded-full shadow-md transition-all duration-300 ${
@@ -656,63 +965,77 @@ const Dashboard: React.FC = () => {
               >
                 <FaSignOutAlt className="text-sm" />
               </button>
-
               <button
                 onClick={toggleMenu}
                 className={`p-2 rounded-md ${
-                  isDarkMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-200"
+                  isDarkMode
+                    ? "text-gray-300 hover:bg-gray-800"
+                    : "text-gray-700 hover:bg-gray-200"
                 } focus:outline-none`}
                 aria-label="Toggle menu"
                 aria-expanded={isMenuOpen}
               >
                 <span className="sr-only">Open menu</span>
-                <svg 
-                  className="h-6 w-6" 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                <svg
+                  className="h-6 w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
                   {isMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
                   )}
                 </svg>
               </button>
             </div>
           </div>
         </div>
-        
-        {/* Mobile Menu */}
-        <div 
+        <div
           className={`transition-all duration-300 ease-in-out overflow-hidden md:hidden ${
             isMenuOpen ? "max-h-64 opacity-100 pb-4" : "max-h-0 opacity-0"
           } ${isDarkMode ? "bg-gray-900/95" : "bg-white/95"} backdrop-blur-sm`}
           aria-hidden={!isMenuOpen}
         >
           <div className="px-4 py-3 space-y-4">
-            {/* User Profile - Mobile */}
             {userName && (
-              <div className={`flex items-center space-x-3 py-2 px-3 rounded-lg ${
-                isDarkMode ? "bg-gray-800/70" : "bg-gray-100/70"
-              }`}>
-                <div className={`flex items-center justify-center h-8 w-8 rounded-full ${
-                  isDarkMode ? "bg-teal-800" : "bg-teal-100"
-                }`}>
-                  <FaUser className={`${
-                    isDarkMode ? "text-teal-300" : "text-teal-600"
-                  } text-sm`} />
+              <div
+                className={`flex items-center space-x-3 py-2 px-3 rounded-lg ${
+                  isDarkMode ? "bg-gray-800/70" : "bg-gray-100/70"
+                }`}
+              >
+                <div
+                  className={`flex items-center justify-center h-8 w-8 rounded-full ${
+                    isDarkMode ? "bg-teal-800" : "bg-teal-100"
+                  }`}
+                >
+                  <FaUser
+                    className={`${
+                      isDarkMode ? "text-teal-300" : "text-teal-600"
+                    } text-sm`}
+                  />
                 </div>
-                <span className={`font-medium ${
-                  isDarkMode ? "text-gray-300" : "text-gray-700"
-                }`}>
+                <span
+                  className={`font-medium ${
+                    isDarkMode ? "text-gray-300" : "text-gray-700"
+                  }`}
+                >
                   {userName}
                 </span>
               </div>
             )}
-
-            {/* Navigation Links - Mobile */}
             <div className="space-y-2">
               <a
                 href="#"
@@ -755,8 +1078,6 @@ const Dashboard: React.FC = () => {
                 Resources
               </a>
             </div>
-
-            {/* Logout Button - Mobile */}
             <button
               onClick={() => setShowLogoutDialog(true)}
               className="flex items-center justify-center gap-2 px-4 py-3 w-full rounded-lg shadow-md transition-all duration-300 bg-gradient-to-r from-rose-500 to-red-500 text-white hover:from-rose-600 hover:to-red-600"
@@ -767,8 +1088,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </nav>
-
-      {/* Main content */}
       <div className="w-full max-w-7xl mx-auto py-24 pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 lg:px-8 relative">
         <div
           className={`p-4 sm:p-6 md:p-8 rounded-3xl shadow-xl ${
@@ -783,7 +1102,11 @@ const Dashboard: React.FC = () => {
             >
               Welcome to CLM Training
             </h1>
-            <p className={`text-sm sm:text-base ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+            <p
+              className={`text-sm sm:text-base ${
+                isDarkMode ? "text-gray-400" : "text-gray-600"
+              }`}
+            >
               Select a learning path to begin your contract management journey
             </p>
           </div>
@@ -800,8 +1123,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Logout confirmation dialog */}
       <LogoutDialog
         isOpen={showLogoutDialog}
         onClose={() => setShowLogoutDialog(false)}
@@ -813,3 +1134,6 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+
+
+// latest code

@@ -27,6 +27,11 @@ import Questionnaire_Level3 from "./Pages/Questionnaire_Level3";
 import MatchingExercise from "./components/MatchingExercise";
 import { matchingData } from "./data/matchingData";
 import { UserAnswersProvider } from "./context/UserAnswersContext";
+import NDA_LevelTwoPart_Two from "./Pages/NDA_LevelTwoPart_Two";
+import NDA_Questionnaire from "./Pages/NDA_Questionnaire";
+import NDA_Live_Generation from "./Pages/NDA_Live_Generation";
+import NDA_LevelTwoPart_Two_Demo from "./Pages/NDA_LevelTwoPart_Two_Demo";
+import NDA_Finish from "./Pages/NDA_Finish";
 
 
 const App = () => {
@@ -74,16 +79,24 @@ const AppRoutes = () => {
       <Route path="/Level-Two-Part-One" element={<ProtectedRoute><Level2 /></ProtectedRoute>} />
       <Route path="/Matching-Exercise" element={<ProtectedRoute><MatchingExercise data={matchingData} /></ProtectedRoute>} />
       <Route path="/Level-Two-Part-Two" element={<ProtectedRoute><LevelTwoPart_Two /></ProtectedRoute>} />
+      <Route path ="/NDA_LevelTwoPart_Two" element={<ProtectedRoute><NDA_LevelTwoPart_Two/></ProtectedRoute>}/>
+      <Route path="NDA_LevelTwoPart_Two-Demo" element={<ProtectedRoute><NDA_LevelTwoPart_Two_Demo/></ProtectedRoute>}/>
       <Route path="/Level-Two-Part-Two-Demo" element={<ProtectedRoute><LevelTwoPart_Two_Demo /></ProtectedRoute>} />
       <Route path="/Level-Three-Quiz" element={<ProtectedRoute><Level3_Quiz /></ProtectedRoute>} />
       <Route path="/Questionnaire" element={<ProtectedRoute><Questionnaire /></ProtectedRoute>} />
+      <Route path ="/NDA_Questionnaire" element={<ProtectedRoute><NDA_Questionnaire/></ProtectedRoute>}/>
       <Route path="/Calculations" element={<Calculations />} />
       <Route path="/Live_Generation" element={<ProtectedRoute><Live_Generation /></ProtectedRoute>} />
+      <Route path ="/NDA_Live_Generation" element={<ProtectedRoute><NDA_Live_Generation/></ProtectedRoute>}/>
       <Route path="/Live_Generation_2" element={<ProtectedRoute><Live_Generation_2 /></ProtectedRoute>} />
       <Route path="/Level-One-Design" element={<ProtectedRoute><LevelOneDesign /></ProtectedRoute>} />
       <Route path="/Finish" element={<ProtectedRoute><Finish /></ProtectedRoute>} />
+      <Route path="NDA_Finish" element={<ProtectedRoute><NDA_Finish/></ProtectedRoute>}/>
     </Routes>
   );
 };
 
 export default App;
+
+
+// latest code
