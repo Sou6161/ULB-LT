@@ -144,28 +144,30 @@ const EmploymentAgreement: React.FC = () => {
           The Employee’s employment with the Company shall commence on{" "}
           <span className="placeholder-employment-start-date">Employment Start Date</span>. The
           Employee's period of continuous employment will begin on this date.
-        </p> 
-
-        <h2 className="text-2xl font-bold mt-6">(PROBATIONARY PERIOD</h2>
-        <p>
-          The first{" "}
-          <span className="placeholder-probation-period-length">Probation Period Length</span> of
-          employment will be a probationary period. The Company shall assess the
-          Employee’s performance and suitability during this time. Upon
-          successful completion, the Employee will be confirmed in their role.){" "}
-          <span className="text-black font-bold">(Optional Clause)</span>      
         </p>
 
+        <h2 className="text-2xl font-bold mt-6">PROBATIONARY PERIOD</h2>
+        <p id="probationary-period-clause">
+          (The first <span className="placeholder-probation-period-length">Probation Period Length</span> months of
+          employment will be a probationary period. The Company shall assess the
+          Employee’s performance and suitability during this time. Upon
+          successful completion, the Employee will be confirmed in their role.)
+          <span className="text-black font-bold"> (Optional Clause)</span>
+        </p>
+
+
         <h2 className="text-2xl font-bold mt-6">JOB TITLE AND DUTIES</h2>
-        <p>
+        <p id="job-title-and-duties">
           The Employee shall be employed as{" "}
           <span className="placeholder-job-title">Job Title</span> and shall
           report to <span className="placeholder-reporting-manager">Reporting Manager</span>. The
           Employee's primary duties shall include{" "}
           <span className="placeholder-duties">Brief Description of Duties</span>.{" "}
-          {"{"}The Employee may be required to perform additional duties as
-          reasonably assigned by the Company{"}"}.
+          <span className="small-condition">
+            &#123;The Employee may be required to perform additional duties as reasonably assigned by the Company&#125;.
+          </span>
         </p>
+
 
         <h2 className="text-2xl font-bold mt-6">PLACE OF WORK</h2>
         <p>
@@ -219,7 +221,7 @@ const EmploymentAgreement: React.FC = () => {
 
         <h2 className="text-2xl font-bold mt-6">(PENSION</h2>
         <p>
-         The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.)
+          The Employee will be enrolled in the Company’s workplace pension scheme in accordance with the Pensions Act 2008. Contributions will be made as required under auto-enrolment legislation.)
         </p>
 
         <h2 className="text-2xl font-bold mt-6">TERMINATION CLAUSE</h2>
@@ -239,7 +241,7 @@ const EmploymentAgreement: React.FC = () => {
           DISCIPLINARY AND GRIEVANCE PROCEDURES
         </h2>
         <p>
-         The Employee is subject to the Company’s disciplinary and grievance procedures, details of which are available upon request.
+          The Employee is subject to the Company’s disciplinary and grievance procedures, details of which are available upon request.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">GOVERNING LAW</h2>
