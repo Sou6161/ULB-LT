@@ -7,13 +7,12 @@ import {
   FaPuzzlePiece,
   FaSignOutAlt,
   FaUser,
-  FaLock,
 } from "react-icons/fa";
 import { GrDocumentConfig } from "react-icons/gr";
 import { GiLevelThreeAdvanced } from "react-icons/gi";
 import { LuBrain } from "react-icons/lu";
 import { BsMoonStarsFill, BsSunFill } from "react-icons/bs";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
 import Header from "./Header";
@@ -136,7 +135,6 @@ const AgreementDialog: React.FC<AgreementDialogProps> = ({
   onClose,
   onSelectAgreement,
   isDarkMode,
-  isNDALevelCompleted,
 }) => {
   if (!isOpen) return null;
 
@@ -560,7 +558,7 @@ const LevelCard: React.FC<LevelProps & { isDarkMode: boolean }> = ({
   const location = useLocation();
   const [showDialog, setShowDialog] = useState(false);
   const [showAgreementDialog, setShowAgreementDialog] = useState(false);
-  const [isNDALevelCompleted, setIsNDALevelCompleted] = useState(() => {
+  const [isNDALevelCompleted] = useState(() => {
     return localStorage.getItem("isNDALevelCompleted") === "true";
   });
   const { setHighlightedTexts } = useHighlightedText();
@@ -614,7 +612,6 @@ const LevelCard: React.FC<LevelProps & { isDarkMode: boolean }> = ({
 
   const handleSelectPart = (part: string, isDemo: boolean = false, isNDA: boolean = false) => {
     setShowDialog(false);
-    const agreement = localStorage.getItem("selectedAgreement") || "employment";
     if (part === "one") {
       navigate("/Level-Two-Part-One");
     } else if (part === "two" || part === "two-demo") {
@@ -777,9 +774,9 @@ const Dashboard: React.FC = () => {
   const [userName, setUserName] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const levels = useMemo(() => levelsData, []);
-  const { setHighlightedTexts } = useHighlightedText();
+  useHighlightedText();
   useQuestionType();
-  const { resetAllScores } = useScore();
+  useScore();
 
   useEffect(() => {
     console.log(

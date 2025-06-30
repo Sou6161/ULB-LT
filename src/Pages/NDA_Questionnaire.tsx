@@ -118,10 +118,7 @@ const DivWithDropdown: React.FC<DivWithDropdownProps> = ({
   const [requiredChanged, setRequiredChanged] = useState<boolean>(initialRequiredChanged);
   const [typeChanged, setTypeChanged] = useState<boolean>(initialTypeChanged);
   const {
-    findPlaceholderByValue,
     updateQuestion,
-    determineQuestionType: contextDetermineQuestionType,
-    questionMaps,
   } = useQuestionEditContext();
 
   const handleTypeSelect = (type: string) => {

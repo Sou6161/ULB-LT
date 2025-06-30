@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, JSX } from "react";
+import { useState, useEffect, useContext } from "react";
 import Navbar from "../components/Navbar";
 import { useNavigate, useLocation } from "react-router";
 import Confetti from "react-confetti";
@@ -7,83 +7,14 @@ import { documentText } from "../utils/NDA_Agreement";
 import { findNDAPlaceholderByValue } from "../utils/NDA_questionTypeUtils";
 import { ThemeContext } from "../context/ThemeContext";
 
-interface UserAnswers {
-  [key: string]: string | boolean | null | { amount: string; currency: string };
-}
 
-const processAgreement = (html: string, answers: UserAnswers, isDarkMode: boolean) => {
-  let updatedHtml = html;
-
-  console.log("Initial html in processAgreement:", html);
-  console.log("userAnswers in processAgreement:", answers);
-
-  // Add font-bold class to h2 tags
-  updatedHtml = updatedHtml.replace(/<h2 className="([^"]*)"/g, (className) => {
-    const classes = className.split(" ");
-    if (!classes.includes("font-bold")) {
-      classes.push("font-bold");
-    }
-    return `<h2 className="${classes.join(" ")}"`;
-  });
-
-  // Handle all placeholders
-  Object.entries(answers).forEach(([question, answer]) => {
-    const placeholder = findNDAPlaceholderByValue(question);
-    if (placeholder) {
-      const escapedPlaceholder = placeholder.replace(/[.*+?^=!:${}()|[\]\/\\]/g, "\\$&");
-      if (typeof answer === "string" && answer.trim()) {
-        updatedHtml = updatedHtml.replace(
-          new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-          `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${answer}</span>`
-        );
-      } else if (typeof answer === "boolean") {
-        updatedHtml = updatedHtml.replace(
-          new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-          answer ? "Yes" : "No"
-        );
-      }
-    }
-  });
-
-  // Handle duration of obligations
-  const durationAnswer = answers["How long do the confidentiality obligations last?"];
-  if (durationAnswer === "Indefinitely") {
-    updatedHtml = updatedHtml.replace(
-      /\[Indefinitely\].*?\[Insert number\].*?years from the date of this Agreement\]/gi,
-      `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">Indefinitely</span>`
-    );
-  } else if (typeof durationAnswer === "string" && durationAnswer.includes("years")) {
-    const years = durationAnswer.match(/\d+/)?.[0] || "";
-    updatedHtml = updatedHtml.replace(
-      /\[Indefinitely\].*?\[Insert number\].*?years from the date of this Agreement\]/gi,
-      `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${years} years from the date of this Agreement</span>`
-    );
-  }
-
-  // Handle employee/adviser disclosure
-  const disclosureAnswer = answers["Can the Recipient disclose the Confidential Information to employees or advisers?"];
-  if (disclosureAnswer === true) {
-    updatedHtml = updatedHtml.replace(
-      /except to its employees \[and professional advisers\] who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause and the clause above/gi,
-      "except to its employees and professional advisers who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause and the clause above"
-    );
-  } else {
-    updatedHtml = updatedHtml.replace(
-      /except to its employees \[and professional advisers\] who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause and the clause above/gi,
-      ""
-    );
-  }
-
-  console.log("Final updatedHtml:", updatedHtml);
-  return updatedHtml;
-};
 
 const NDA_Finish = () => {
   const { isDarkMode } = useContext(ThemeContext);
   const navigate = useNavigate();
   const location = useLocation();
-  const [confetti, setConfetti] = useState(true);
-  const [windowDimensions, setWindowDimensions] = useState({
+  const [confetti] = useState(true);
+  const [, setWindowDimensions] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
   });
@@ -135,7 +66,6 @@ const NDA_Finish = () => {
           });
 
           // Copy the small condition logic from NDA_Live_Generation
-          const smallConditionRaw = "except to its employees and professional advisers who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause 2 above and this clause 3";
           const smallConditionQuestion = "Can the Recipient disclose the Confidential Information to employees or advisers?";
           const userSmallConditionAnswer = parsedAnswers[smallConditionQuestion];
           processedHtml = processedHtml.replace(

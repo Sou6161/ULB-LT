@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useCallback, useContext, useEffect } from "react";
+import { useState, useContext, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { documentText } from "../utils/NDA_Agreement";
 import { ThemeContext } from "../context/ThemeContext";
@@ -328,7 +328,6 @@ const NDA_Live_Generation = () => {
 
     // Handle NDA-specific small condition clause visibility
     // Clause text to match (must match exactly as in the template)
-    const smallConditionRaw = "except to its employees and professional advisers who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause 2 above and this clause 3";
     const smallConditionQuestion = "Can the Recipient disclose the Confidential Information to employees or advisers?";
     const userSmallConditionAnswer = userAnswers[smallConditionQuestion];
 
@@ -371,29 +370,6 @@ const NDA_Live_Generation = () => {
     setAgreement(updatedText);
   }, [userAnswers, isDarkMode]);
 
-  const validateInput = (type: string, value: string): string => {
-    if (!value) return "";
-    switch (type) {
-      case "Number":
-        if (!/^\d*\.?\d*$/.test(value)) {
-          return "Please enter a valid number.";
-        }
-        break;
-      case "Date":
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-          return "Please enter a valid date in YYYY-MM-DD format.";
-        }
-        break;
-      case "Email":
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          return "Please enter a valid email address.";
-        }
-        break;
-      default:
-        break;
-    }
-    return "";
-  };
 
   const handleAnswerChange = (index: number, value: any, questionOverride?: string) => {
     const question = questionOverride || editedQuestions[index] || "";

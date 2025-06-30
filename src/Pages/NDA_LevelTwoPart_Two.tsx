@@ -607,7 +607,7 @@ const NDA_LevelTwoPart_Two = () => {
             }`}
           >
             {[...new Set(highlightedTexts)].map((text, index) => {
-              const { primaryType, primaryValue } = determineNDAQuestionType(text);
+              const { primaryValue } = determineNDAQuestionType(text);
               // First try to get the question from determineNDAQuestionType
               let displayText = primaryValue;
               
