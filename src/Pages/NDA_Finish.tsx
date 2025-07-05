@@ -52,15 +52,35 @@ const NDA_Finish = () => {
             if (placeholder) {
               const escapedPlaceholder = placeholder.replace(/[.*+?^=!:${}()|[\]\/\\]/g, "\\$&");
               if (typeof answer === "string" && answer.trim()) {
-                processedHtml = processedHtml.replace(
-                  new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-                  `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${answer}</span>`
-                );
+                // Handle placeholders that already contain brackets (like "201[ ]")
+                if (placeholder.includes("[") && placeholder.includes("]")) {
+                  // For placeholders with brackets, replace the entire placeholder
+                  processedHtml = processedHtml.replace(
+                    new RegExp(escapedPlaceholder, "gi"),
+                    `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${answer}</span>`
+                  );
+                } else {
+                  // For regular placeholders, add brackets around them
+                  processedHtml = processedHtml.replace(
+                    new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
+                    `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${answer}</span>`
+                  );
+                }
               } else if (typeof answer === "boolean") {
-                processedHtml = processedHtml.replace(
-                  new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-                  answer ? "Yes" : "No"
-                );
+                // Handle placeholders that already contain brackets (like "201[ ]")
+                if (placeholder.includes("[") && placeholder.includes("]")) {
+                  // For placeholders with brackets, replace the entire placeholder
+                  processedHtml = processedHtml.replace(
+                    new RegExp(escapedPlaceholder, "gi"),
+                    answer ? "Yes" : "No"
+                  );
+                } else {
+                  // For regular placeholders, add brackets around them
+                  processedHtml = processedHtml.replace(
+                    new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
+                    answer ? "Yes" : "No"
+                  );
+                }
               }
             }
           });

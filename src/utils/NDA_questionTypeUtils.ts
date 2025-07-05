@@ -209,6 +209,15 @@ export const determineNDAQuestionType = (text: string): {
   if (radioQuestionMatch) {
     primaryType = "Radio";
     primaryValue = radioQuestionMatch;
+  } else {
+    // Check if the original text matches any radio type questions
+    const originalRadioQuestionMatch = Object.values(ndaRadioTypes).find(
+      (question) => question === text
+    );
+    if (originalRadioQuestionMatch) {
+      primaryType = "Radio";
+      primaryValue = originalRadioQuestionMatch;
+    }
   }
 
   if (ndaTextTypes.hasOwnProperty(normalizedText)) {
@@ -218,6 +227,15 @@ export const determineNDAQuestionType = (text: string): {
     } else {
       alternateType = "Text";
       alternateValue = ndaTextTypes[normalizedText];
+    }
+  } else if (ndaTextTypes.hasOwnProperty(text)) {
+    // Check the original text (with brackets) for text types
+    if (primaryType === "Unknown") {
+      primaryType = "Text";
+      primaryValue = ndaTextTypes[text];
+    } else {
+      alternateType = "Text";
+      alternateValue = ndaTextTypes[text];
     }
   }
 
@@ -229,6 +247,15 @@ export const determineNDAQuestionType = (text: string): {
       alternateType = "Number";
       alternateValue = ndaNumberTypes[normalizedText];
     }
+  } else if (ndaNumberTypes.hasOwnProperty(text)) {
+    // Check the original text (with brackets) for number types
+    if (primaryType === "Unknown") {
+      primaryType = "Number";
+      primaryValue = ndaNumberTypes[text];
+    } else {
+      alternateType = "Number";
+      alternateValue = ndaNumberTypes[text];
+    }
   }
 
   if (ndaDateTypes.hasOwnProperty(normalizedText)) {
@@ -238,6 +265,15 @@ export const determineNDAQuestionType = (text: string): {
     } else {
       alternateType = "Date";
       alternateValue = ndaDateTypes[normalizedText];
+    }
+  } else if (ndaDateTypes.hasOwnProperty(text)) {
+    // Check the original text (with brackets) for date types
+    if (primaryType === "Unknown") {
+      primaryType = "Date";
+      primaryValue = ndaDateTypes[text];
+    } else {
+      alternateType = "Date";
+      alternateValue = ndaDateTypes[text];
     }
   }
 

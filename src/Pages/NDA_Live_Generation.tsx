@@ -313,15 +313,35 @@ const NDA_Live_Generation = () => {
       if (placeholder) {
         const escapedPlaceholder = placeholder.replace(/[.*+?^=!:${}()|[\]\/\\]/g, "\\$&");
         if (typeof answer === "string" && answer.trim()) {
-          updatedText = updatedText.replace(
-            new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-            `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${answer}</span>`
-          );
+          // Handle placeholders that already contain brackets (like "201[ ]")
+          if (placeholder.includes("[") && placeholder.includes("]")) {
+            // For placeholders with brackets, replace the entire placeholder
+            updatedText = updatedText.replace(
+              new RegExp(escapedPlaceholder, "gi"),
+              `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${answer}</span>`
+            );
+          } else {
+            // For regular placeholders, add brackets around them
+            updatedText = updatedText.replace(
+              new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
+              `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${answer}</span>`
+            );
+          }
         } else if (typeof answer === "boolean") {
-          updatedText = updatedText.replace(
-            new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-            answer ? "Yes" : "No"
-          );
+          // Handle placeholders that already contain brackets (like "201[ ]")
+          if (placeholder.includes("[") && placeholder.includes("]")) {
+            // For placeholders with brackets, replace the entire placeholder
+            updatedText = updatedText.replace(
+              new RegExp(escapedPlaceholder, "gi"),
+              answer ? "Yes" : "No"
+            );
+          } else {
+            // For regular placeholders, add brackets around them
+            updatedText = updatedText.replace(
+              new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
+              answer ? "Yes" : "No"
+            );
+          }
         }
       }
     });
@@ -387,12 +407,13 @@ const NDA_Live_Generation = () => {
     // Always map the question for display
     let question = editedQuestions[index] || "";
     const rawText = highlightedTexts[index] || "";
-    const { primaryValue } = determineNDAQuestionType(rawText);
+    const { primaryValue, primaryType } = determineNDAQuestionType(rawText);
     if (!question || question === rawText) {
       question = primaryValue || smallConditionToQuestionMap[rawText] || rawText;
     }
     if (!question) return null;
-    const currentType = selectedTypes[index] || "Text";
+    // Use the determined type from determineNDAQuestionType, fallback to selectedTypes
+    const currentType = primaryType !== "Unknown" ? primaryType : selectedTypes[index] || "Text";
     const answer = userAnswers[question] !== undefined ? userAnswers[question] : currentType === "Radio" ? null : "";
     const error = inputErrors[question] || "";
     const isRequired = requiredQuestions[index] || false;
@@ -462,6 +483,38 @@ const NDA_Live_Generation = () => {
                 <span>No</span>
               </label>
             </div>
+          ) : currentType === "Date" ? (
+            <input
+              type="date"
+              className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
+              value={answer as string}
+              onChange={(e) => handleAnswerChange(index, e.target.value, question)}
+              required={isRequired}
+            />
+          ) : currentType === "Number" ? (
+            <input
+              type="number"
+              className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
+              value={answer as string}
+              onChange={(e) => handleAnswerChange(index, e.target.value, question)}
+              required={isRequired}
+            />
+          ) : currentType === "Email" ? (
+            <input
+              type="email"
+              className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
+              value={answer as string}
+              onChange={(e) => handleAnswerChange(index, e.target.value, question)}
+              required={isRequired}
+            />
+          ) : currentType === "Paragraph" ? (
+            <textarea
+              className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
+              rows={4}
+              value={answer as string}
+              onChange={(e) => handleAnswerChange(index, e.target.value, question)}
+              required={isRequired}
+            />
           ) : (
             <input
               type="text"
