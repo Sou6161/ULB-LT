@@ -10,6 +10,7 @@ import { useUserAnswers } from "../context/UserAnswersContext";
 import parse, { DOMNode, Element } from "html-react-parser";
 import PerformanceStar_SubLevel_1Game from "../components/PerformanceStar_SubLevel_1Game";
 import CodeCircuit_SubLevel_3Game from "../components/CodeCircuit_SubLevel_3Game";
+import NDA_SmallCondition_SubLevel_2Game from "../components/NDA_SmallCondition_SubLevel_2Game";
 
 import { useScore } from "../context/ScoreContext";
 
@@ -136,7 +137,7 @@ const SmallCondition_SubLevel_2GamePopup: React.FC<SmallCondition_SubLevel_2Game
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
-      <SmallCondition_SubLevel_2GamePopup
+      <NDA_SmallCondition_SubLevel_2Game
         score={score}
         onRetry={onReplay}
         onContinue={onContinue}
@@ -754,6 +755,19 @@ const Live_Generation = () => {
           ? "bg-teal-600/70 text-teal-100"
           : "bg-teal-200/70 text-teal-900"
       } px-1 rounded">${employerNameAnswer}</span>`
+    );
+  }
+
+  // Special handling for Probation Period Length
+  const probationLengthAnswer = userAnswers["What's the probation period length?"] as string;
+  if (probationAnswer === true && probationLengthAnswer && typeof probationLengthAnswer === "string" && probationLengthAnswer.trim()) {
+    updatedText = updatedText.replace(
+      /Probation Period Length/gi,
+      `<span class="${
+        isDarkMode
+          ? "bg-teal-600/70 text-teal-100"
+          : "bg-teal-200/70 text-teal-900"
+      } px-1 rounded">${probationLengthAnswer}</span>`
     );
   }
 

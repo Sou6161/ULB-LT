@@ -506,7 +506,7 @@ const Questionnaire: React.FC<{}> = () => {
     const isProbationaryClauseSelected = uniqueHighlightedTexts.some(
       (text) =>
         text ===
-        "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role."
+        "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee's performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role."
     );
 
     const isAdditionalLocationsClauseSelected = uniqueHighlightedTexts.some(
@@ -565,7 +565,7 @@ const Questionnaire: React.FC<{}> = () => {
     const smallConditionTextWithoutBrackets = "The Employee may be required to work at [other locations].";
     const followUpText = "other locations";
     const probationClause =
-      "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee’s performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
+      "The first Probation Period Length of employment will be a probationary period. The Company shall assess the Employee's performance and suitability during this time. Upon successful completion, the Employee will be confirmed in their role.";
     const probationFollowUp = "Probation Period Length";
 
     filteredQuestions.forEach((text) => {
@@ -591,6 +591,22 @@ const Questionnaire: React.FC<{}> = () => {
         orderedTexts.push(text);
       }
     });
+
+    // Force add follow-up if present in highlightedTexts but missing from orderedTexts
+    if (
+      highlightedTexts.includes(probationFollowUp) &&
+      !orderedTexts.includes(probationFollowUp)
+    ) {
+      const clauseIdx = orderedTexts.indexOf(probationClause);
+      if (clauseIdx !== -1) {
+        orderedTexts.splice(clauseIdx + 1, 0, probationFollowUp);
+      } else {
+        orderedTexts.push(probationFollowUp);
+      }
+    }
+
+    console.log('orderedTexts:', orderedTexts);
+    console.log('uniqueQuestions:', uniqueQuestions);
 
     const newUniqueQuestions = orderedTexts;
     const newQuestionTexts: string[] = [];

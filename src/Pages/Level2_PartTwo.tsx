@@ -197,7 +197,7 @@ const LevelTwoPart_Two = () => {
         id: "select-create-small-condition",
         text: `
           <p><strong>Action time!</strong> Highlight the entire overtime pay clause wrapped in curly braces.</p>
-          <p>Now click the <strong>‘Condition’</strong> button to automate it. 🎯</p>
+          <p>Now click the <strong>'Condition'</strong> button to automate it. 🎯</p>
         `,
         attachTo: { element: "#icon-small-condition", on: "bottom" },
         buttons: [{ text: "Done", action: tour.next }],
@@ -579,6 +579,14 @@ const LevelTwoPart_Two = () => {
 
       if (!highlightedTexts.includes(clauseContent)) {
         addHighlightedText(clauseContent);
+        // Always add the follow-up placeholder when the probationary clause is added
+        if (
+          clauseContent.toLowerCase().includes("probation period length") &&
+          !highlightedTexts.includes("Probation Period Length")
+        ) {
+          addHighlightedText("Probation Period Length");
+          console.log("Added follow-up question: Probation Period Length");
+        }
       }
 
       const probationClause =
