@@ -13,12 +13,14 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => {
-    // Clear sessionStorage (as per existing functionality)
+    // Preserve dark/light mode selection
+    const theme = localStorage.getItem("theme");
     sessionStorage.clear();
-    
-    // Clear questionnaireState from localStorage to reset question types
-    localStorage.removeItem("questionnaireState");
-    console.log("Cleared questionnaireState from localStorage on HomePage");
+    localStorage.clear();
+    if (theme) {
+      localStorage.setItem("theme", theme);
+    }
+    console.log("Cleared all localStorage and sessionStorage on HomePage, but preserved theme");
   }, []);
 
   const words = useMemo(

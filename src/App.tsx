@@ -92,6 +92,7 @@ const AppRoutes = () => {
       <Route path="/Level-One-Design" element={<ProtectedRoute><LevelOneDesign /></ProtectedRoute>} />
       <Route path="/Finish" element={<ProtectedRoute><Finish /></ProtectedRoute>} />
       <Route path="NDA_Finish" element={<ProtectedRoute><NDA_Finish/></ProtectedRoute>}/>
+      <Route path="/NDA-Demo-Challenge-1" element={<ProtectedRoute><NDA_LevelTwoPart_Two_Demo /></ProtectedRoute>} />
     </Routes>
   );
 };

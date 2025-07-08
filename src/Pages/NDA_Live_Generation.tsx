@@ -12,6 +12,8 @@ import {
 import NDACompassProgress_SubLevel_1Game from "../components/CompassProgress_SubLevel_1Game";
 import NDA_SmallCondition_SubLevel_2Game from "../components/NDA_SmallCondition_SubLevel_2Game";
 import NDA_BigCondition_SubLevel_3Game from "../components/NDA_BigCondition_SubLevel_3Game";
+import Shepherd from "shepherd.js";
+import "shepherd.js/dist/css/shepherd.css";
 
 // NDA-specific context for user answers (local state for isolation)
 interface NDAUserAnswers {
@@ -637,6 +639,48 @@ const NDA_Live_Generation = () => {
       setShowCustomDialog(true);
       sessionStorage.removeItem("justCompletedNDA");
     }
+  }, []);
+
+  useEffect(() => {
+    if (localStorage.getItem("ndaProductTourCompleted")) return;
+    setTimeout(() => {
+      const tour = new Shepherd.Tour({
+        defaultStepOptions: {
+          cancelIcon: { enabled: true },
+          classes: "shadow-md bg-purple-dark",
+          scrollTo: { behavior: "smooth", block: "center" },
+        },
+        useModalOverlay: true,
+      });
+      tour.addStep({
+        id: "welcome-nda-live-gen",
+        text: `
+          <div class="welcome-message">
+            <strong>🚀 NDA Live Generation</strong>
+            <p>This is where you bring your NDA to life!</p>
+            <p>Answer the questions below to customize your NDA agreement.</p>
+          </div>
+        `,
+        attachTo: { element: document.body, on: "bottom-start" },
+        buttons: [{ text: "Next", action: tour.next }],
+      });
+      tour.addStep({
+        id: "answer-questions",
+        text: `Fill out <strong>all the required questions</strong> to ensure your NDA is complete and tailored to your needs. Each answer will update your document in real time!`,
+        attachTo: { element: "form, .questionnaire-section, .w-full.flex.flex-col", on: "top" },
+        buttons: [{ text: "Next", action: tour.next }],
+      });
+      tour.addStep({
+        id: "get-nda",
+        text: `Once you've answered all questions, you'll receive a <strong>fully customized NDA document</strong> ready to download or use. Make sure to review your answers before finishing!`,
+        attachTo: { element: "button[type='submit'], .download-btn, .finish-btn", on: "top" },
+        buttons: [{ text: "Finish", action: () => { localStorage.setItem("ndaProductTourCompleted", "true"); tour.complete(); } }],
+      });
+      tour.start();
+    }, 500);
+    return () => {
+      Shepherd.activeTour && Shepherd.activeTour.complete();
+    };
   }, []);
 
   return (

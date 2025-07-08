@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { determineNDAQuestionType, findNDAPlaceholderByValue } from "../utils/NDA_questionTypeUtils";
 import { useUserAnswers } from "../context/UserAnswersContext";
+import Shepherd from "shepherd.js";
+import "shepherd.js/dist/css/shepherd.css";
 
 // Mapping for small conditions to their corresponding questions
 const smallConditionToQuestionMap: { [key: string]: string } = {
@@ -754,6 +756,21 @@ const NDA_Questionnaire: React.FC<{}> = () => {
     questionOrder,
   ]);
 
+  useEffect(() => {
+    // On mount, load highlightedTexts from sessionStorage if available
+    const ndaLevelTwoPartTwoState = sessionStorage.getItem("ndaLevelTwoPartTwoState");
+    if (ndaLevelTwoPartTwoState) {
+      try {
+        const parsed = JSON.parse(ndaLevelTwoPartTwoState);
+        if (parsed.highlightedTexts && Array.isArray(parsed.highlightedTexts)) {
+          setHighlightedTexts(parsed.highlightedTexts);
+        }
+      } catch (e) {
+        console.error("Failed to parse ndaLevelTwoPartTwoState for highlightedTexts", e);
+      }
+    }
+  }, []);
+
   const handleTypeChange = (index: number, type: string) => {
     const newTypes = [...selectedTypes];
     newTypes[index] = type;
@@ -954,8 +971,59 @@ const NDA_Questionnaire: React.FC<{}> = () => {
     sessionStorage.removeItem("selectedQuestionTypes_2");
     sessionStorage.removeItem("typeChangedStates_2");
     sessionStorage.removeItem("levelTwoPartTwoState");
+    // Also clear highlightedTexts in ndaLevelTwoPartTwoState for NDA_LevelTwoPart_Two
+    sessionStorage.setItem("ndaLevelTwoPartTwoState", JSON.stringify({ highlightedTexts: [] }));
     console.log("All states, storage, and scores reset successfully.");
   };
+
+  useEffect(() => {
+    if (localStorage.getItem("ndaProductTourCompleted")) return;
+    // Wait for DOM to render questions
+    setTimeout(() => {
+      const tour = new Shepherd.Tour({
+        defaultStepOptions: {
+          cancelIcon: { enabled: true },
+          classes: "shadow-md bg-purple-dark",
+          scrollTo: { behavior: "smooth", block: "center" },
+        },
+        useModalOverlay: true,
+      });
+      tour.addStep({
+        id: "welcome-nda-questionnaire",
+        text: `
+          <div class="welcome-message">
+            <strong>📝 Welcome to the NDA Questionnaire!</strong>
+            <p>Here you will configure the questions that control how your NDA is generated.</p>
+            <p>Each question lets you customize the agreement for your needs.</p>
+          </div>
+        `,
+        attachTo: { element: document.body, on: "bottom-start" },
+        buttons: [{ text: "Show Me!", action: tour.next }],
+      });
+      tour.addStep({
+        id: "highlight-duration-question",
+        text: `This is a key question: <strong>What's the name of the recipient?</strong> You can edit the question text, select its type, and mark it as required.`,
+        attachTo: { element: ".flex.items-center.space-x-8.w-full.relative", on: "top" },
+        buttons: [{ text: "Next", action: tour.next }],
+      });
+      tour.addStep({
+        id: "highlight-type-dropdown",
+        text: `Use this dropdown to select the question type (e.g., Text, Radio, Number, Date, Number, Paragraph , Email). For this Question, 'Text' is often best!`,
+        attachTo: { element: ".flex.items.space-x-2.text-sm.px-3.py-1.rounded-lg.shadow-md", on: "bottom" },
+        buttons: [{ text: "Next", action: tour.next }],
+      });
+      tour.addStep({
+        id: "highlight-required-toggle",
+        text: `Toggle this switch to make the question required. Required questions must be answered before generating the NDA!`,
+        attachTo: { element: ".relative.w-12.h-6.rounded-full.p-1", on: "left" },
+        buttons: [{ text: "Finish", action: tour.complete }],
+      });
+      tour.start();
+    }, 500); // Delay to ensure DOM is ready
+    return () => {
+      Shepherd.activeTour && Shepherd.activeTour.complete();
+    };
+  }, []);
 
   return (
     <div
