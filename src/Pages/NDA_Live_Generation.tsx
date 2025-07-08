@@ -643,44 +643,87 @@ const NDA_Live_Generation = () => {
 
   useEffect(() => {
     if (localStorage.getItem("ndaProductTourCompleted")) return;
-    setTimeout(() => {
-      const tour = new Shepherd.Tour({
-        defaultStepOptions: {
-          cancelIcon: { enabled: true },
-          classes: "shadow-md bg-purple-dark",
-          scrollTo: { behavior: "smooth", block: "center" },
-        },
-        useModalOverlay: true,
-      });
-      tour.addStep({
-        id: "welcome-nda-live-gen",
-        text: `
-          <div class="welcome-message">
-            <strong>🚀 NDA Live Generation</strong>
-            <p>This is where you bring your NDA to life!</p>
-            <p>Answer the questions below to customize your NDA agreement.</p>
-          </div>
-        `,
-        attachTo: { element: document.body, on: "bottom-start" },
-        buttons: [{ text: "Next", action: tour.next }],
-      });
-      tour.addStep({
-        id: "answer-questions",
-        text: `Fill out <strong>all the required questions</strong> to ensure your NDA is complete and tailored to your needs. Each answer will update your document in real time!`,
-        attachTo: { element: "form, .questionnaire-section, .w-full.flex.flex-col", on: "top" },
-        buttons: [{ text: "Next", action: tour.next }],
-      });
-      tour.addStep({
-        id: "get-nda",
-        text: `Once you've answered all questions, you'll receive a <strong>fully customized NDA document</strong> ready to download or use. Make sure to review your answers before finishing!`,
-        attachTo: { element: "button[type='submit'], .download-btn, .finish-btn", on: "top" },
-        buttons: [{ text: "Finish", action: () => { localStorage.setItem("ndaProductTourCompleted", "true"); tour.complete(); } }],
-      });
-      tour.start();
-    }, 500);
-    return () => {
-      Shepherd.activeTour && Shepherd.activeTour.complete();
-    };
+    const selectedPart = parseInt(localStorage.getItem("selectedPart") || "0", 10);
+    if (selectedPart === 1) {
+      setTimeout(() => {
+        const tour = new Shepherd.Tour({
+          defaultStepOptions: {
+            cancelIcon: { enabled: true },
+            classes: "shadow-md bg-purple-dark",
+            scrollTo: { behavior: "smooth", block: "center" },
+          },
+          useModalOverlay: true,
+        });
+        tour.addStep({
+          id: "welcome-nda-live-gen-1",
+          text: `
+            <div class="welcome-message">
+              <strong>🚀 NDA Live Generation</strong>
+              <p>This is where you bring your NDA to life!</p>
+              <p>Answer the questions below to customize your NDA agreement.</p>
+            </div>
+          `,
+          attachTo: { element: document.body, on: "bottom-start" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "answer-questions-1",
+          text: `Fill out <strong>all the required questions</strong> to ensure your NDA is complete and tailored to your needs. Each answer will update your document in real time!`,
+          attachTo: { element: "form, .questionnaire-section, .w-full.flex.flex-col", on: "top" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "get-nda-1",
+          text: `Once you've answered all questions, you'll receive a <strong>fully customized NDA document</strong> ready to download or use. Make sure to review your answers before finishing!`,
+          attachTo: { element: "button[type='submit'], .download-btn, .finish-btn", on: "top" },
+          buttons: [{ text: "Finish", action: () => { localStorage.setItem("ndaProductTourCompleted", "true"); tour.complete(); } }],
+        });
+        tour.start();
+      }, 500);
+      return () => {
+        Shepherd.activeTour && Shepherd.activeTour.complete();
+      };
+    }
+    if (selectedPart === 2) {
+      setTimeout(() => {
+        const tour = new Shepherd.Tour({
+          defaultStepOptions: {
+            cancelIcon: { enabled: true },
+            classes: "shadow-md bg-purple-dark",
+            scrollTo: { behavior: "smooth", block: "center" },
+          },
+          useModalOverlay: true,
+        });
+        tour.addStep({
+          id: "welcome-nda-live-gen-2",
+          text: `
+            <div class='welcome-message'>
+              <strong>🎉 Challenge 2: Small Conditions</strong>
+              <p>This is where you automate small conditions in your NDA!</p>
+              <p>Answer the small condition question to control the appearance of optional clauses.</p>
+            </div>
+          `,
+          attachTo: { element: document.body, on: "bottom-start" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "answer-small-condition",
+          text: `This is the <strong>small condition</strong> question. Your answer will determine if the optional clause appears in your NDA.`,
+          attachTo: { element: "form, .questionnaire-section, .w-full.flex.flex-col", on: "top" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "get-nda-2",
+          text: `Once you've answered all questions, you'll receive a <strong>fully customized NDA document</strong> with your chosen small conditions. Make sure to review your answers before finishing!`,
+          attachTo: { element: "button[type='submit'], .download-btn, .finish-btn", on: "top" },
+          buttons: [{ text: "Finish", action: () => { localStorage.setItem("ndaProductTourCompleted", "true"); tour.complete(); } }],
+        });
+        tour.start();
+      }, 500);
+      return () => {
+        Shepherd.activeTour && Shepherd.activeTour.complete();
+      };
+    }
   }, []);
 
   return (

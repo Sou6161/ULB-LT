@@ -48,7 +48,7 @@ export const documentText = `
               <h2 className="text-2xl font-bold mt-6">NON-DISCLOSURE OBLIGATION</h2>
               <p>
                   The Recipient undertakes to keep the Confidential Information secure and not to disclose it to any third party 
-{except to its employees and professional advisers who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause 2 above and this clause 3}.
+                  <span className="small-condition-highlight">{except to its employees and professional advisers who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause 2 above and this clause 3}</span>.
               </p>
           </div>
           <div>
@@ -163,8 +163,8 @@ const NDAAgreement: React.FC = () => {
 
         <h2 className="text-2xl font-bold mt-6">NON-DISCLOSURE OBLIGATION</h2>
         <p>
-          The Recipient undertakes to keep the Confidential Information secure and not to disclose it to any third party{" "}
-          {"{"}except to its employees and professional advisers who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause 2 above and this clause 3{"}"}.
+          The Recipient undertakes to keep the Confidential Information secure and not to disclose it to any third party 
+          <span className="small-condition-highlight">{"{"}except to its employees and professional advisers who need to know the same for the Purpose, who know they owe a duty of confidence to the Discloser and who are bound by obligations equivalent to those in this clause 2 above and this clause 3{"}"}</span>.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">EXCEPTIONS TO OBLIGATIONS</h2>

@@ -978,51 +978,95 @@ const NDA_Questionnaire: React.FC<{}> = () => {
 
   useEffect(() => {
     if (localStorage.getItem("ndaProductTourCompleted")) return;
-    // Wait for DOM to render questions
-    setTimeout(() => {
-      const tour = new Shepherd.Tour({
-        defaultStepOptions: {
-          cancelIcon: { enabled: true },
-          classes: "shadow-md bg-purple-dark",
-          scrollTo: { behavior: "smooth", block: "center" },
-        },
-        useModalOverlay: true,
-      });
-      tour.addStep({
-        id: "welcome-nda-questionnaire",
-        text: `
-          <div class="welcome-message">
-            <strong>📝 Welcome to the NDA Questionnaire!</strong>
-            <p>Here you will configure the questions that control how your NDA is generated.</p>
-            <p>Each question lets you customize the agreement for your needs.</p>
-          </div>
-        `,
-        attachTo: { element: document.body, on: "bottom-start" },
-        buttons: [{ text: "Show Me!", action: tour.next }],
-      });
-      tour.addStep({
-        id: "highlight-duration-question",
-        text: `This is a key question: <strong>What's the name of the recipient?</strong> You can edit the question text, select its type, and mark it as required.`,
-        attachTo: { element: ".flex.items-center.space-x-8.w-full.relative", on: "top" },
-        buttons: [{ text: "Next", action: tour.next }],
-      });
-      tour.addStep({
-        id: "highlight-type-dropdown",
-        text: `Use this dropdown to select the question type (e.g., Text, Radio, Number, Date, Number, Paragraph , Email). For this Question, 'Text' is often best!`,
-        attachTo: { element: ".flex.items.space-x-2.text-sm.px-3.py-1.rounded-lg.shadow-md", on: "bottom" },
-        buttons: [{ text: "Next", action: tour.next }],
-      });
-      tour.addStep({
-        id: "highlight-required-toggle",
-        text: `Toggle this switch to make the question required. Required questions must be answered before generating the NDA!`,
-        attachTo: { element: ".relative.w-12.h-6.rounded-full.p-1", on: "left" },
-        buttons: [{ text: "Finish", action: tour.complete }],
-      });
-      tour.start();
-    }, 500); // Delay to ensure DOM is ready
-    return () => {
-      Shepherd.activeTour && Shepherd.activeTour.complete();
-    };
+    const selectedPart = parseInt(localStorage.getItem("selectedPart") || "0", 10);
+    if (selectedPart === 1) {
+      // Challenge 1: Master Placeholders tour
+      setTimeout(() => {
+        const tour = new Shepherd.Tour({
+          defaultStepOptions: {
+            cancelIcon: { enabled: true },
+            classes: "shadow-md bg-purple-dark",
+            scrollTo: { behavior: "smooth", block: "center" },
+          },
+          useModalOverlay: true,
+        });
+        tour.addStep({
+          id: "welcome-nda-questionnaire-1",
+          text: `
+            <div class="welcome-message">
+              <strong>📝 Welcome to the NDA Questionnaire!</strong>
+              <p>Here you will configure the questions that control how your NDA is generated.</p>
+              <p>Each question lets you customize the agreement for your needs.</p>
+            </div>
+          `,
+          attachTo: { element: document.body, on: "bottom-start" },
+          buttons: [{ text: "Show Me!", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-placeholder-question",
+          text: `This is a key placeholder question. You can edit the question text, select its type, and mark it as required.`,
+          attachTo: { element: ".flex.items-center.space-x-8.w-full.relative", on: "top" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-type-dropdown",
+          text: `Use this dropdown to select the type of answer (e.g., Text, Radio, Number, Date). For placeholders, 'Text' is often best!`,
+          attachTo: { element: ".flex.items.space-x-2.text-sm.px-3.py-1.rounded-lg.shadow-md", on: "bottom" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-required-toggle",
+          text: `Toggle this switch to make the question required. Required questions must be answered before generating the NDA!`,
+          attachTo: { element: ".relative.w-12.h-6.rounded-full.p-1", on: "left" },
+          buttons: [{ text: "Finish", action: tour.complete }],
+        });
+        tour.start();
+      }, 500);
+      return () => {
+        Shepherd.activeTour && Shepherd.activeTour.complete();
+      };
+    }
+    if (selectedPart === 2) {
+      // Challenge 2: Small Conditions tour
+      setTimeout(() => {
+        const tour = new Shepherd.Tour({
+          defaultStepOptions: {
+            cancelIcon: { enabled: true },
+            classes: "shadow-md bg-purple-dark",
+            scrollTo: { behavior: "smooth", block: "center" },
+          },
+          useModalOverlay: true,
+        });
+        tour.addStep({
+          id: "welcome-nda-questionnaire-2",
+          text: `
+            <div class='welcome-message'>
+              <strong>🎉 Challenge 2: Small Conditions</strong>
+              <p>Now let's master <strong>Small Conditions</strong> in your NDA questionnaire.</p>
+              <p>Your mission: Configure the small condition question and its type!</p>
+            </div>
+          `,
+          attachTo: { element: document.body, on: "bottom-start" },
+          buttons: [{ text: "Let's go!", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-small-condition-question",
+          text: `This is the small condition question. You can edit the question text, select its type (usually 'Radio'), and mark it as required.`,
+          attachTo: { element: ".flex.items-center.space-x-8.w-full.relative", on: "top" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-type-dropdown-small",
+          text: `Use this dropdown to select the type for the small condition (e.g., Radio).` ,
+          attachTo: { element: ".flex.items.space-x-2.text-sm.px-3.py-1.rounded-lg.shadow-md", on: "bottom" },
+          buttons: [{ text: "Finish", action: tour.complete }],
+        });
+        tour.start();
+      }, 500);
+      return () => {
+        Shepherd.activeTour && Shepherd.activeTour.complete();
+      };
+    }
   }, []);
 
   return (
