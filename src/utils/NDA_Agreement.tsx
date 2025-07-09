@@ -82,7 +82,7 @@ export const documentText = `
               </p>
           </div>
           <div>
-              <h2 className="text-2xl font-bold mt-6">(DURATION OF OBLIGATIONS</h2>
+              <h2 className="text-2xl font-bold mt-6" id="big-condition-section">(DURATION OF OBLIGATIONS</h2>
               <p>
                   The undertakings above will continue in force ([Indefinitely] [for [Insert number] years from the date of this Agreement]).)
               </p>
@@ -193,11 +193,13 @@ const NDAAgreement: React.FC = () => {
           Neither this Agreement nor the supply of any information grants the Recipient any licence, interest, or right in respect of any intellectual property rights of the Discloser except the right to copy the Confidential Information solely for the Purpose.
         </p>
 
-        <h2 className="text-2xl font-bold mt-6">(DURATION OF OBLIGATIONS</h2>
-        <p>
-         
-          The undertakings above will continue in force ([Indefinitely] [for [Insert number] years from the date of this Agreement]).)
-        </p>
+        {/* Big Condition Section */}
+        <div id="big-condition-section">
+          <h2 className="text-2xl font-bold mt-6">(DURATION OF OBLIGATIONS</h2>
+          <p>
+            The undertakings above will continue in force ([Indefinitely] [for [Insert number] years from the date of this Agreement]).)
+          </p>
+        </div>
 
         <h2 className="text-2xl font-bold mt-6">GOVERNING LAW AND JURISDICTION</h2>
         <p>

@@ -269,10 +269,68 @@ const NDA_LevelTwoPart_Two = () => {
         tour.complete();
       };
     }
+    if (selectedPart === 3) {
+      const tour = new Shepherd.Tour({
+        defaultStepOptions: {
+          cancelIcon: { enabled: true },
+          classes: "shadow-md bg-purple-dark",
+          scrollTo: { behavior: "smooth", block: "center" },
+        },
+        useModalOverlay: true,
+      });
+      tour.addStep({
+        id: "welcome-level-3",
+        text: `
+          <div class='welcome-message'>
+            <strong>🏆 Challenge 3: Big Conditions</strong>
+            <p>Now let's master <strong>Big Conditions</strong> in NDA agreements.</p>
+            <p>Your mission: Find and automate big conditions wrapped in round brackets <code>( )</code>!</p>
+          </div>
+        `,
+        attachTo: { element: document.body, on: "bottom-start" },
+        buttons: [{ text: "Let's go!", action: tour.next }],
+      });
+      tour.addStep({
+        id: "big-condition-explanation",
+        text: `Big conditions are optional sections that can include or exclude entire clauses. Look for text wrapped in round brackets like:<br/><blockquote>(DURATION OF OBLIGATIONS<br/>The undertakings above will continue in force ([Indefinitely] [for [Insert number] years from the date of this Agreement]).)</blockquote>`,
+        attachTo: { element: document.body, on: "bottom-start" },
+        buttons: [{ text: "Next", action: tour.next }],
+      });
+      tour.addStep({
+        id: "highlight-big-condition",
+        text: `This is the big condition you need to automate. Select the entire round-bracketed text and use the Big Condition button!`,
+        attachTo: { element: "#big-condition-section", on: "bottom" },
+        buttons: [{ text: "Next", action: tour.next }],
+        when: {
+          show: () => {
+            const el = document.getElementById('big-condition-section');
+            if (el) {
+              const range = document.createRange();
+              range.selectNodeContents(el);
+              const sel = window.getSelection();
+              if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+            }
+          }
+        }
+      });
+      tour.addStep({
+        id: "big-condition-button",
+        text: `This is your <strong>Big Condition</strong> button. Click it after selecting a big condition!`,
+        attachTo: { element: "#icon-big-condition", on: "bottom" },
+        buttons: [{ text: "Got it!", action: tour.complete }],
+      });
+      tour.start();
+      return () => {
+        tour.complete();
+      };
+    }
   }, [selectedPart]);
 
   useEffect(() => {
-    setShowRestartTour(!!localStorage.getItem("ndaProductTourCompleted") && (selectedPart === 1 || selectedPart === 2));
+    setShowRestartTour(!!localStorage.getItem("ndaProductTourCompleted") && ([1,2,3].includes(selectedPart)));
   }, [selectedPart]);
 
   const handleRestartTour = () => {
@@ -607,7 +665,7 @@ const NDA_LevelTwoPart_Two = () => {
   return (
     <>
       {showRestartTour && (
-        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000 }}>
+        <div style={{ position: 'fixed', top:150, left:10, zIndex: 1000 }}>
           <button
             onClick={handleRestartTour}
             style={{

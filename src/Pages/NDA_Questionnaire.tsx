@@ -1067,6 +1067,53 @@ const NDA_Questionnaire: React.FC<{}> = () => {
         Shepherd.activeTour && Shepherd.activeTour.complete();
       };
     }
+    if (selectedPart === 3) {
+      // Challenge 3: Big Conditions tour
+      setTimeout(() => {
+        const tour = new Shepherd.Tour({
+          defaultStepOptions: {
+            cancelIcon: { enabled: true },
+            classes: "shadow-md bg-purple-dark",
+            scrollTo: { behavior: "smooth", block: "center" },
+          },
+          useModalOverlay: true,
+        });
+        tour.addStep({
+          id: "welcome-nda-questionnaire-3",
+          text: `
+            <div class='welcome-message'>
+              <strong>🏆 Challenge 3: Big Conditions</strong>
+              <p>Now let's master <strong>Big Conditions</strong> in your NDA questionnaire.</p>
+              <p>Your mission: Configure the big condition question and its type!</p>
+            </div>
+          `,
+          attachTo: { element: document.body, on: "bottom-start" },
+          buttons: [{ text: "Let's go!", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-big-condition-question",
+          text: `This is the big condition question. You can edit the question text, select its type (usually 'Radio'), and mark it as required.`,
+          attachTo: { element: ".flex.items-center.space-x-8.w-full.relative", on: "top" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-type-dropdown-big",
+          text: `Use this dropdown to select the type for the big condition (e.g., Radio).` ,
+          attachTo: { element: ".flex.items.space-x-2.text-sm.px-3.py-1.rounded-lg.shadow-md", on: "bottom" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "highlight-required-toggle-big",
+          text: `Toggle this switch to make the big condition question required. Required questions must be answered before generating the NDA!`,
+          attachTo: { element: ".relative.w-12.h-6.rounded-full.p-1", on: "left" },
+          buttons: [{ text: "Finish", action: tour.complete }],
+        });
+        tour.start();
+      }, 500);
+      return () => {
+        Shepherd.activeTour && Shepherd.activeTour.complete();
+      };
+    }
   }, []);
 
   return (

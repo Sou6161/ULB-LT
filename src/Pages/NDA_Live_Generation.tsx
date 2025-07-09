@@ -724,6 +724,46 @@ const NDA_Live_Generation = () => {
         Shepherd.activeTour && Shepherd.activeTour.complete();
       };
     }
+    if (selectedPart === 3) {
+      setTimeout(() => {
+        const tour = new Shepherd.Tour({
+          defaultStepOptions: {
+            cancelIcon: { enabled: true },
+            classes: "shadow-md bg-purple-dark",
+            scrollTo: { behavior: "smooth", block: "center" },
+          },
+          useModalOverlay: true,
+        });
+        tour.addStep({
+          id: "welcome-nda-live-gen-3",
+          text: `
+            <div class='welcome-message'>
+              <strong>🏆 Challenge 3: Big Conditions</strong>
+              <p>This is where you automate big conditions in your NDA!</p>
+              <p>Answer the big condition question to control the appearance of major clauses.</p>
+            </div>
+          `,
+          attachTo: { element: document.body, on: "bottom-start" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "answer-big-condition",
+          text: `This is the <strong>big condition</strong> question. Your answer will determine if the major clause appears in your NDA.`,
+          attachTo: { element: "form, .questionnaire-section, .w-full.flex.flex-col", on: "top" },
+          buttons: [{ text: "Next", action: tour.next }],
+        });
+        tour.addStep({
+          id: "get-nda-3",
+          text: `Once you've answered all questions, you'll receive a <strong>fully customized NDA document</strong> with your chosen big conditions. Make sure to review your answers before finishing!`,
+          attachTo: { element: "button[type='submit'], .download-btn, .finish-btn", on: "top" },
+          buttons: [{ text: "Finish", action: () => { localStorage.setItem("ndaProductTourCompleted", "true"); tour.complete(); } }],
+        });
+        tour.start();
+      }, 500);
+      return () => {
+        Shepherd.activeTour && Shepherd.activeTour.complete();
+      };
+    }
   }, []);
 
   return (
