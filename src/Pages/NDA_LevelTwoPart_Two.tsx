@@ -378,6 +378,11 @@ const NDA_LevelTwoPart_Two = () => {
     // Process the selected text based on its type
     if (selectedText.startsWith("[") && selectedText.endsWith("]")) {
       textWithoutBrackets = selectedText.slice(1, -1); // Remove [ and ]
+      if (textWithoutBrackets.trim().length === 0) {
+        // It's an empty placeholder like [ ], do nothing
+        isProcessingRef.current = false;
+        return;
+      }
       hasValidSpanClass = true;
     } else if (selectedText.startsWith("{") && selectedText.endsWith("}")) {
       // For small conditions, remove curly braces

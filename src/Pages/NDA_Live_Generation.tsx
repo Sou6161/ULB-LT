@@ -314,19 +314,25 @@ const NDA_Live_Generation = () => {
       const placeholder = findNDAPlaceholderByValue(question);
       if (placeholder) {
         const escapedPlaceholder = placeholder.replace(/[.*+?^=!:${}()|[\]\/\\]/g, "\\$&");
+        let displayAnswer = answer;
+        // Format date to DD-MM-YYYY if it's the date question
+        if (question === "What's the date of the agreement?" && typeof answer === "string" && /^\d{4}-\d{2}-\d{2}$/.test(answer)) {
+          const [yyyy, mm, dd] = answer.split("-");
+          displayAnswer = `${dd}-${mm}-${yyyy}`;
+        }
         if (typeof answer === "string" && answer.trim()) {
           // Handle placeholders that already contain brackets (like "201[ ]")
           if (placeholder.includes("[") && placeholder.includes("]")) {
             // For placeholders with brackets, replace the entire placeholder
             updatedText = updatedText.replace(
               new RegExp(escapedPlaceholder, "gi"),
-              `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${answer}</span>`
+              `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${displayAnswer}</span>`
             );
           } else {
             // For regular placeholders, add brackets around them
             updatedText = updatedText.replace(
               new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-              `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${answer}</span>`
+              `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${displayAnswer}</span>`
             );
           }
         } else if (typeof answer === "boolean") {

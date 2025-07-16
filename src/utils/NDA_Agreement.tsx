@@ -10,7 +10,7 @@ export const documentText = `
           <div>
               <h2 className="text-2xl font-bold mt-6">DATE</h2>
               <p>
-                  Date: <span className="placeholder-agreement-date">201[ ]</span>
+                  Date: <span className="placeholder-agreement-date">[2010]</span>
               </p>
           </div>
           <div>
@@ -130,7 +130,7 @@ const NDAAgreement: React.FC = () => {
       <div className="text-blue-600 leading-relaxed">
         <h2 className="text-2xl font-bold">DATE</h2>
         <p id="agreement-date-placeholder">
-          Date: <span className="placeholder-agreement-date">201[ ]</span>
+          Date: <span className="placeholder-agreement-date">[2010]</span>
         </p>
 
         <h2 className="text-2xl font-bold mt-6">PARTIES</h2>
