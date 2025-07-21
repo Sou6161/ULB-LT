@@ -14,7 +14,6 @@ import { useScore } from "../context/ScoreContext";
 import parse from "html-react-parser";
 import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
-import { useCallback } from "react";
 
 // Define icon type for clarity
 interface Icon {

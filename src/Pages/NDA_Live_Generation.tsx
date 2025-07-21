@@ -14,7 +14,6 @@ import NDA_SmallCondition_SubLevel_2Game from "../components/NDA_SmallCondition_
 import NDA_BigCondition_SubLevel_3Game from "../components/NDA_BigCondition_SubLevel_3Game";
 import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
-import { useCallback } from "react";
 
 // NDA-specific context for user answers (local state for isolation)
 interface NDAUserAnswers {
