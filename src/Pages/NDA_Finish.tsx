@@ -48,34 +48,41 @@ const NDA_Finish = () => {
 
           // Handle NDA-specific placeholders
           Object.entries(parsedAnswers).forEach(([question, answer]) => {
-            const placeholder = findNDAPlaceholderByValue(question);
+            let placeholder = findNDAPlaceholderByValue(question);
+            let displayAnswer = answer;
+            // Support for date question regardless of question text used as key
+            const isDateAnswer =
+              (question === "What's the date of the agreement?" || question === "[YYYY-DD-MM]" || question === "YYYY-DD-MM") &&
+              typeof answer === "string" && /^\d{4}-\d{2}-\d{2}$/.test(answer);
+            if (isDateAnswer) {
+              displayAnswer = answer;
+              processedHtml = processedHtml.replace(
+                /\[YYYY-DD-MM\]/gi,
+                `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${displayAnswer}</span>`
+              );
+              return;
+            }
             if (placeholder) {
               const escapedPlaceholder = placeholder.replace(/[.*+?^=!:${}()|[\]\/\\]/g, "\\$&");
               if (typeof answer === "string" && answer.trim()) {
-                // Handle placeholders that already contain brackets (like "201[ ]")
                 if (placeholder.includes("[") && placeholder.includes("]")) {
-                  // For placeholders with brackets, replace the entire placeholder
                   processedHtml = processedHtml.replace(
                     new RegExp(escapedPlaceholder, "gi"),
-                    `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${answer}</span>`
+                    `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${displayAnswer}</span>`
                   );
                 } else {
-                  // For regular placeholders, add brackets around them
                   processedHtml = processedHtml.replace(
                     new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
-                    `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${answer}</span>`
+                    `<span class="${isDarkMode ? "bg-teal-600/70 text-teal-100" : "bg-teal-200/70 text-teal-900"} px-1 rounded">${displayAnswer}</span>`
                   );
                 }
               } else if (typeof answer === "boolean") {
-                // Handle placeholders that already contain brackets (like "201[ ]")
                 if (placeholder.includes("[") && placeholder.includes("]")) {
-                  // For placeholders with brackets, replace the entire placeholder
                   processedHtml = processedHtml.replace(
                     new RegExp(escapedPlaceholder, "gi"),
                     answer ? "Yes" : "No"
                   );
                 } else {
-                  // For regular placeholders, add brackets around them
                   processedHtml = processedHtml.replace(
                     new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
                     answer ? "Yes" : "No"

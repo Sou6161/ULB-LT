@@ -63,6 +63,7 @@ export const ndaNumberTypes: { [key: string]: string } = {
 export const ndaDateTypes: { [key: string]: string } = {
   '[2010]': "What's the date of the agreement?",
   '2010': "What's the date of the agreement?", // Added for normalized placeholder
+  '[YYYY-DD-MM]': "What's the date of the agreement?", // Added for new placeholder format
   // Additional specific questions for date fields
   "Effective Date": "When should the agreement become effective?",
   "Expiration Date": "When should the agreement expire?",

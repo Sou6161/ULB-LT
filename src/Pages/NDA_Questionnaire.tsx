@@ -334,6 +334,8 @@ const NDA_Questionnaire: React.FC<{}> = () => {
   const { setUserAnswers } = useUserAnswers() as UserAnswersContextType;
   const navigate = useNavigate();
   const prevHighlightedTextsRef = useRef<string[]>([]);
+  // Add showRestartTour state
+  // Remove showRestartTour state and restart button rendering
 
   // NDA-specific follow-up questions
   const followUpQuestions = [
@@ -384,6 +386,19 @@ const NDA_Questionnaire: React.FC<{}> = () => {
           smallConditionToQuestionMap[textValue] === "How long do the confidentiality obligations last?" ||
           textValue === "How long do the confidentiality obligations last?";
       
+      // Special handling for date question - force correctType to Date
+      const isDateQuestion = (
+        textValue === "[YYYY-DD-MM]" ||
+        textValue === "[2010]" ||
+        textValue === "2010" ||
+        textValue === "YYYY-DD-MM" ||
+        textValue === "What's the date of the agreement?" ||
+        (typeof correctType === "string" && correctType.toLowerCase() === "date")
+      );
+      if (isDateQuestion) {
+        correctType = "Date";
+        console.log(`Debug - Forced Date type for date question`);
+      }
       if (isDurationQuestion) {
         correctType = "Radio";
         console.log(`Debug - Forced Radio type for duration question`);
@@ -409,6 +424,9 @@ const NDA_Questionnaire: React.FC<{}> = () => {
       if (isDurationQuestion || isIndefinitelyQuestion) {
         points = isCorrect ? 3 : -2;
         console.log(`Debug - Special question scoring: ${points} points (isCorrect: ${isCorrect})`);
+      } else if (isDateQuestion) {
+        points = isCorrect ? 2 : -2;
+        console.log(`Debug - Date question scoring: ${points} points (isCorrect: ${isCorrect})`);
       } else {
         points = isCorrect ? 2 : -2;
         console.log(`Debug - Regular question scoring: ${points} points (isCorrect: ${isCorrect})`);
@@ -979,10 +997,15 @@ const NDA_Questionnaire: React.FC<{}> = () => {
   useEffect(() => {
     if (localStorage.getItem("ndaProductTourCompleted")) return;
     const selectedPart = parseInt(localStorage.getItem("selectedPart") || "0", 10);
+    let tour: any = null;
+    const handleCancel = () => {
+      localStorage.setItem("ndaProductTourCompleted", "true");
+      if (tour) tour.complete();
+      // setShowRestartTour(true); // This line is removed
+    };
     if (selectedPart === 1) {
-      // Challenge 1: Master Placeholders tour
       setTimeout(() => {
-        const tour = new Shepherd.Tour({
+        tour = new Shepherd.Tour({
           defaultStepOptions: {
             cancelIcon: { enabled: true },
             classes: "shadow-md bg-purple-dark",
@@ -990,6 +1013,7 @@ const NDA_Questionnaire: React.FC<{}> = () => {
           },
           useModalOverlay: true,
         });
+        tour.on("cancel", handleCancel);
         tour.addStep({
           id: "welcome-nda-questionnaire-1",
           text: `
@@ -1022,14 +1046,11 @@ const NDA_Questionnaire: React.FC<{}> = () => {
         });
         tour.start();
       }, 500);
-      return () => {
-        Shepherd.activeTour && Shepherd.activeTour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
     if (selectedPart === 2) {
-      // Challenge 2: Small Conditions tour
       setTimeout(() => {
-        const tour = new Shepherd.Tour({
+        tour = new Shepherd.Tour({
           defaultStepOptions: {
             cancelIcon: { enabled: true },
             classes: "shadow-md bg-purple-dark",
@@ -1037,6 +1058,7 @@ const NDA_Questionnaire: React.FC<{}> = () => {
           },
           useModalOverlay: true,
         });
+        tour.on("cancel", handleCancel);
         tour.addStep({
           id: "welcome-nda-questionnaire-2",
           text: `
@@ -1063,14 +1085,11 @@ const NDA_Questionnaire: React.FC<{}> = () => {
         });
         tour.start();
       }, 500);
-      return () => {
-        Shepherd.activeTour && Shepherd.activeTour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
     if (selectedPart === 3) {
-      // Challenge 3: Big Conditions tour
       setTimeout(() => {
-        const tour = new Shepherd.Tour({
+        tour = new Shepherd.Tour({
           defaultStepOptions: {
             cancelIcon: { enabled: true },
             classes: "shadow-md bg-purple-dark",
@@ -1078,6 +1097,7 @@ const NDA_Questionnaire: React.FC<{}> = () => {
           },
           useModalOverlay: true,
         });
+        tour.on("cancel", handleCancel);
         tour.addStep({
           id: "welcome-nda-questionnaire-3",
           text: `
@@ -1110,9 +1130,7 @@ const NDA_Questionnaire: React.FC<{}> = () => {
         });
         tour.start();
       }, 500);
-      return () => {
-        Shepherd.activeTour && Shepherd.activeTour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
   }, []);
 
@@ -1264,17 +1282,22 @@ const NDA_Questionnaire: React.FC<{}> = () => {
                   <div {...provided.droppableProps} ref={provided.innerRef}>
                     {questionOrder.map((originalIndex, displayIndex) => {
                       const text = uniqueQuestions[originalIndex];
-                      const { primaryValue } = enhancedDetermineQuestionType(text);
-                      
-                      // First try to get the question from determineNDAQuestionType
-                      let displayQuestion = primaryValue;
-                      
-                      // If no primaryValue, check the smallConditionToQuestionMap
-                      if (!displayQuestion && smallConditionToQuestionMap[text]) {
-                        displayQuestion = smallConditionToQuestionMap[text];
+                      // Try mapping with raw, normalized, and bracketed text
+                      let normalizedText = text.replace(/^[\[{]+|[\]}]+$/g, '').trim();
+                      let displayQuestion = '';
+                      let result = enhancedDetermineQuestionType(text);
+                      if (result.primaryValue) displayQuestion = result.primaryValue;
+                      if (!displayQuestion) {
+                        result = enhancedDetermineQuestionType(normalizedText);
+                        if (result.primaryValue) displayQuestion = result.primaryValue;
                       }
-                      
-                      // If still no mapping found, use the original text
+                      if (!displayQuestion) {
+                        result = enhancedDetermineQuestionType(`[${normalizedText}]`);
+                        if (result.primaryValue) displayQuestion = result.primaryValue;
+                      }
+                      if (!displayQuestion && smallConditionToQuestionMap[normalizedText]) {
+                        displayQuestion = smallConditionToQuestionMap[normalizedText];
+                      }
                       if (!displayQuestion) {
                         displayQuestion = text;
                       }
@@ -1348,6 +1371,35 @@ const NDA_Questionnaire: React.FC<{}> = () => {
           )}
         </div>
       </div>
+      {/* Remove showRestartTour && ( */}
+      {/*   <div style={{ position: 'fixed', top: 150, left: 10, zIndex: 1000 }}> */}
+      {/*     <button */}
+      {/*       onClick={() => { */}
+      {/*         // Preserve theme and selectedPart */}
+      {/*         const theme = localStorage.getItem("theme"); */}
+      {/*         const selectedPart = localStorage.getItem("selectedPart"); */}
+      {/*         localStorage.clear(); */}
+      {/*         sessionStorage.clear(); */}
+      {/*         if (theme) localStorage.setItem("theme", theme); */}
+      {/*         if (selectedPart) localStorage.setItem("selectedPart", selectedPart); */}
+      {/*         window.location.reload(); */}
+      {/*       }} */}
+      {/*       style={{ */}
+      {/*         background: '#2563eb', */}
+      {/*         color: 'white', */}
+      {/*         padding: '10px 20px', */}
+      {/*         borderRadius: '8px', */}
+      {/*         fontWeight: 'bold', */}
+      {/*         boxShadow: '0 2px 8px rgba(0,0,0,0.15)', */}
+      {/*         border: 'none', */}
+      {/*         cursor: 'pointer', */}
+      {/*       }} */}
+      {/*       aria-label="Restart Product Tour" */}
+      {/*     > */}
+      {/*       Restart Product Tour */}
+      {/*     </button> */}
+      {/*   </div> */}
+      {/* ) */}
     </div>
   );
 };

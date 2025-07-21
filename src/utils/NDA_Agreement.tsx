@@ -10,7 +10,7 @@ export const documentText = `
           <div>
               <h2 className="text-2xl font-bold mt-6">DATE</h2>
               <p>
-                  Date: <span className="placeholder-agreement-date">[2010]</span>
+                  Date: <span className="placeholder-agreement-date">[YYYY-DD-MM]</span>
               </p>
           </div>
           <div>
@@ -130,22 +130,22 @@ const NDAAgreement: React.FC = () => {
       <div className="text-blue-600 leading-relaxed">
         <h2 className="text-2xl font-bold">DATE</h2>
         <p id="agreement-date-placeholder">
-          Date: <span className="placeholder-agreement-date">[2010]</span>
+          Date: <span className="placeholder-agreement-date">[YYYY-DD-MM]</span>
         </p>
 
         <h2 className="text-2xl font-bold mt-6">PARTIES</h2>
         <p>
           <strong>Recipient:</strong>{" "}
           <span className="placeholder-recipient-name">[Name of Individual or Company Receiving Information]</span>,{" "}
-          {"{"}residing at <span className="placeholder-recipient-address">[Address of Individual (Recipient)]</span>{"}"}{" "}
-          {"{"}a company registered in <span className="placeholder-recipient-jurisdiction">[England (Recipient)]</span> under company number <span className="placeholder-recipient-company-number">[Number on Register of Companies (Recipient)]</span> whose registered office is at <span className="placeholder-recipient-registered-office">[Address of Office on the Register of Companies (Recipient)]</span>{"}"}{" "}
+          residing at <span className="placeholder-recipient-address">[Address of Individual (Recipient)]</span>{" "}
+          a company registered in <span className="placeholder-recipient-jurisdiction">[England (Recipient)]</span> under company number <span className="placeholder-recipient-company-number">[Number on Register of Companies (Recipient)]</span> whose registered office is at <span className="placeholder-recipient-registered-office">[Address of Office on the Register of Companies (Recipient)]</span>{" "}
           ("Recipient").
         </p>
         <p>
           <strong>Discloser:</strong>{" "}
           <span className="placeholder-discloser-name">[Name of Individual or Company Disclosing Information]</span>,{" "}
-          {"{"}residing at <span className="placeholder-discloser-address">[Address of Individual (Discloser)]</span>{"}"}{" "}
-          {"{"}a company registered in <span className="placeholder-discloser-jurisdiction">[England (Discloser)]</span> under company number <span className="placeholder-discloser-company-number">[Number on Register of Companies (Discloser)]</span> whose registered office is at <span className="placeholder-discloser-registered-office">[Address of Office on the Register of Companies (Discloser)]</span>{"}"}{" "}
+          residing at <span className="placeholder-discloser-address">[Address of Individual (Discloser)]</span>{" "}
+          a company registered in <span className="placeholder-discloser-jurisdiction">[England (Discloser)]</span> under company number <span className="placeholder-discloser-company-number">[Number on Register of Companies (Discloser)]</span> whose registered office is at <span className="placeholder-discloser-registered-office">[Address of Office on the Register of Companies (Discloser)]</span>{" "}
           ("Discloser").
         </p>
 

@@ -14,6 +14,7 @@ import { useScore } from "../context/ScoreContext";
 import parse from "html-react-parser";
 import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
+import { useCallback } from "react";
 
 // Define icon type for clarity
 interface Icon {
@@ -173,8 +174,15 @@ const NDA_LevelTwoPart_Two = () => {
 
   useEffect(() => {
     if (localStorage.getItem("ndaProductTourCompleted")) return;
+    const selectedPart = parseInt(localStorage.getItem("selectedPart") || "0", 10);
+    let tour: any = null;
+    const handleCancel = () => {
+      localStorage.setItem("ndaProductTourCompleted", "true");
+      if (tour) tour.complete();
+      setShowRestartTour(true);
+    };
     if (selectedPart === 1) {
-      const tour = new Shepherd.Tour({
+      tour = new Shepherd.Tour({
         defaultStepOptions: {
           cancelIcon: { enabled: true },
           classes: "shadow-md bg-purple-dark",
@@ -182,6 +190,7 @@ const NDA_LevelTwoPart_Two = () => {
         },
         useModalOverlay: true,
       });
+      tour.on("cancel", handleCancel);
       tour.addStep({
         id: "welcome-level-1",
         text: `
@@ -207,12 +216,10 @@ const NDA_LevelTwoPart_Two = () => {
         buttons: [{ text: "Got it!", action: tour.complete }],
       });
       tour.start();
-      return () => {
-        tour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
     if (selectedPart === 2) {
-      const tour = new Shepherd.Tour({
+      tour = new Shepherd.Tour({
         defaultStepOptions: {
           cancelIcon: { enabled: true },
           classes: "shadow-md bg-purple-dark",
@@ -220,6 +227,7 @@ const NDA_LevelTwoPart_Two = () => {
         },
         useModalOverlay: true,
       });
+      tour.on("cancel", handleCancel);
       tour.addStep({
         id: "welcome-level-2",
         text: `
@@ -265,12 +273,10 @@ const NDA_LevelTwoPart_Two = () => {
         buttons: [{ text: "Got it!", action: tour.complete }],
       });
       tour.start();
-      return () => {
-        tour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
     if (selectedPart === 3) {
-      const tour = new Shepherd.Tour({
+      tour = new Shepherd.Tour({
         defaultStepOptions: {
           cancelIcon: { enabled: true },
           classes: "shadow-md bg-purple-dark",
@@ -278,6 +284,7 @@ const NDA_LevelTwoPart_Two = () => {
         },
         useModalOverlay: true,
       });
+      tour.on("cancel", handleCancel);
       tour.addStep({
         id: "welcome-level-3",
         text: `
@@ -323,9 +330,7 @@ const NDA_LevelTwoPart_Two = () => {
         buttons: [{ text: "Got it!", action: tour.complete }],
       });
       tour.start();
-      return () => {
-        tour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
   }, [selectedPart]);
 
@@ -670,7 +675,7 @@ const NDA_LevelTwoPart_Two = () => {
   return (
     <>
       {showRestartTour && (
-        <div style={{ position: 'fixed', top:150, left:10, zIndex: 1000 }}>
+        <div style={{ position: 'fixed', top: 150, left: 10, zIndex: 1000 }}>
           <button
             onClick={handleRestartTour}
             style={{
@@ -813,16 +818,22 @@ const NDA_LevelTwoPart_Two = () => {
             }`}
           >
             {[...new Set(highlightedTexts)].map((text, index) => {
-              const { primaryValue } = determineNDAQuestionType(text);
-              // First try to get the question from determineNDAQuestionType
-              let displayText = primaryValue;
-              
-              // If no primaryValue, check the smallConditionToQuestionMap
-              if (!displayText && smallConditionToQuestionMap[text]) {
-                displayText = smallConditionToQuestionMap[text];
+              // Try mapping with raw, normalized, and bracketed text
+              let normalizedText = text.replace(/^[\[{]+|[\]}]+$/g, '').trim();
+              let displayText = '';
+              let result = determineNDAQuestionType(text);
+              if (result.primaryValue) displayText = result.primaryValue;
+              if (!displayText) {
+                result = determineNDAQuestionType(normalizedText);
+                if (result.primaryValue) displayText = result.primaryValue;
               }
-              
-              // If still no mapping found, use the original text
+              if (!displayText) {
+                result = determineNDAQuestionType(`[${normalizedText}]`);
+                if (result.primaryValue) displayText = result.primaryValue;
+              }
+              if (!displayText && smallConditionToQuestionMap[normalizedText]) {
+                displayText = smallConditionToQuestionMap[normalizedText];
+              }
               if (!displayText) {
                 displayText = text;
               }

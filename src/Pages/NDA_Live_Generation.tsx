@@ -14,6 +14,7 @@ import NDA_SmallCondition_SubLevel_2Game from "../components/NDA_SmallCondition_
 import NDA_BigCondition_SubLevel_3Game from "../components/NDA_BigCondition_SubLevel_3Game";
 import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
+import { useCallback } from "react";
 
 // NDA-specific context for user answers (local state for isolation)
 interface NDAUserAnswers {
@@ -202,6 +203,7 @@ const NDA_Live_Generation = () => {
   const [smallConditionScore, setSmallConditionScore] = useState(0);
   const [showBigConditionPopup, setShowBigConditionPopup] = useState(false);
   const [bigConditionScore, setBigConditionScore] = useState(0);
+  // Remove showRestartTour state and restart button rendering
 
   // Load userAnswers from sessionStorage on component mount
   useEffect(() => {
@@ -311,40 +313,42 @@ const NDA_Live_Generation = () => {
 
     // Handle NDA-specific placeholders
     Object.entries(userAnswers).forEach(([question, answer]) => {
-      const placeholder = findNDAPlaceholderByValue(question);
+      let placeholder = findNDAPlaceholderByValue(question);
+      let displayAnswer = answer;
+      // Support for date question regardless of question text used as key
+      const isDateAnswer =
+        (question === "What's the date of the agreement?" || question === "[YYYY-DD-MM]" || question === "YYYY-DD-MM") &&
+        typeof answer === "string" && /^\d{4}-\d{2}-\d{2}$/.test(answer);
+      if (isDateAnswer) {
+        // Show the date as entered (YYYY-MM-DD)
+        displayAnswer = answer;
+        updatedText = updatedText.replace(
+          /\[YYYY-DD-MM\]/gi,
+          `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${displayAnswer}</span>`
+        );
+        return;
+      }
       if (placeholder) {
         const escapedPlaceholder = placeholder.replace(/[.*+?^=!:${}()|[\]\/\\]/g, "\\$&");
-        let displayAnswer = answer;
-        // Format date to DD-MM-YYYY if it's the date question
-        if (question === "What's the date of the agreement?" && typeof answer === "string" && /^\d{4}-\d{2}-\d{2}$/.test(answer)) {
-          const [yyyy, mm, dd] = answer.split("-");
-          displayAnswer = `${dd}-${mm}-${yyyy}`;
-        }
         if (typeof answer === "string" && answer.trim()) {
-          // Handle placeholders that already contain brackets (like "201[ ]")
           if (placeholder.includes("[") && placeholder.includes("]")) {
-            // For placeholders with brackets, replace the entire placeholder
             updatedText = updatedText.replace(
               new RegExp(escapedPlaceholder, "gi"),
               `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${displayAnswer}</span>`
             );
           } else {
-            // For regular placeholders, add brackets around them
             updatedText = updatedText.replace(
               new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
               `<span class="${isDarkMode ? "bg-blue-600/70 text-blue-100" : "bg-blue-200/70 text-blue-900"} px-1 rounded">${displayAnswer}</span>`
             );
           }
         } else if (typeof answer === "boolean") {
-          // Handle placeholders that already contain brackets (like "201[ ]")
           if (placeholder.includes("[") && placeholder.includes("]")) {
-            // For placeholders with brackets, replace the entire placeholder
             updatedText = updatedText.replace(
               new RegExp(escapedPlaceholder, "gi"),
               answer ? "Yes" : "No"
             );
           } else {
-            // For regular placeholders, add brackets around them
             updatedText = updatedText.replace(
               new RegExp(`\\[${escapedPlaceholder}\\]`, "gi"),
               answer ? "Yes" : "No"
@@ -387,10 +391,16 @@ const NDA_Live_Generation = () => {
           `(for ${yearsValue} years from the date of this Agreement).`
         );
       }
-    } else {
-      // Remove the entire duration of obligations section
+    } else if (userIndefinitelyAnswer === false) {
+      // Remove the entire big condition section robustly
+      // 1. Try to remove the <div> containing the big condition section
       updatedText = updatedText.replace(
-        /<div>\s*<h2 className="text-2xl font-bold mt-6">\(DURATION OF OBLIGATIONS<\/h2>\s*<p>\s*The undertakings above will continue in force \(\[Indefinitely\] \[for \[Insert number\] years from the date of this Agreement\]\)\.\)\s*<\/p>\s*<\/div>/g,
+        /<div>\s*<h2[^>]*id="big-condition-section"[^>]*>[\s\S]*?<\/h2>[\s\S]*?<\/div>/g,
+        ""
+      );
+      // 2. Fallback: Remove any <h2> with id="big-condition-section" and its following <p>
+      updatedText = updatedText.replace(
+        /<h2[^>]*id="big-condition-section"[^>]*>[\s\S]*?<\/h2>\s*<p>[\s\S]*?<\/p>/g,
         ""
       );
     }
@@ -415,14 +425,33 @@ const NDA_Live_Generation = () => {
     // Always map the question for display
     let question = editedQuestions[index] || "";
     const rawText = highlightedTexts[index] || "";
-    const { primaryValue, primaryType } = determineNDAQuestionType(rawText);
-    if (!question || question === rawText) {
-      question = primaryValue || smallConditionToQuestionMap[rawText] || rawText;
+    // Try mapping with raw, normalized, and bracketed text
+    let normalizedText = rawText.replace(/^[\[{]+|[\]}]+$/g, '').trim();
+    let displayQuestion = '';
+    let result = determineNDAQuestionType(rawText);
+    if (result.primaryValue) displayQuestion = result.primaryValue;
+    if (!displayQuestion) {
+      result = determineNDAQuestionType(normalizedText);
+      if (result.primaryValue) displayQuestion = result.primaryValue;
     }
-    if (!question) return null;
-    // Use the determined type from determineNDAQuestionType, fallback to selectedTypes
-    const currentType = primaryType !== "Unknown" ? primaryType : selectedTypes[index] || "Text";
-    const answer = userAnswers[question] !== undefined ? userAnswers[question] : currentType === "Radio" ? null : "";
+    if (!displayQuestion) {
+      result = determineNDAQuestionType(`[${normalizedText}]`);
+      if (result.primaryValue) displayQuestion = result.primaryValue;
+    }
+    if (!displayQuestion && smallConditionToQuestionMap[normalizedText]) {
+      displayQuestion = smallConditionToQuestionMap[normalizedText];
+    }
+    if (!displayQuestion) {
+      displayQuestion = rawText;
+    }
+    if (!question || question === rawText) {
+      question = displayQuestion;
+    }
+    const userSelectedType = selectedTypes[index] || null;
+    const { primaryType } = determineNDAQuestionType(rawText);
+    // Use user-selected type if available, otherwise fallback to detected type
+    const effectiveType = userSelectedType && userSelectedType !== "Unknown" ? userSelectedType : primaryType;
+    const answer = userAnswers[question] !== undefined ? userAnswers[question] : effectiveType === "Radio" ? null : "";
     const error = inputErrors[question] || "";
     const isRequired = requiredQuestions[index] || false;
     if (question === DURATION_MAIN_QUESTION) {
@@ -480,7 +509,7 @@ const NDA_Live_Generation = () => {
       <div key={index} className="mb-12">
         <div className="w-full">
           <p className={`text-lg font-medium ${isDarkMode ? "text-blue-200" : "text-blue-900"}`}>{question}{isRequired && <span className="text-red-500 ml-2">*</span>}</p>
-          {currentType === "Radio" ? (
+          {effectiveType === "Radio" ? (
             <div className="mt-4 flex space-x-6">
               <label className={`flex items-center space-x-2 cursor-pointer ${isDarkMode ? "text-blue-300" : "text-blue-700"}`}>
                 <input type="radio" name={`radio-${index}-${question}`} checked={answer === true} onChange={() => handleAnswerChange(index, true, question)} className="cursor-pointer" required={isRequired} />
@@ -491,7 +520,7 @@ const NDA_Live_Generation = () => {
                 <span>No</span>
               </label>
             </div>
-          ) : currentType === "Date" ? (
+          ) : effectiveType === "Date" ? (
             <input
               type="date"
               className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
@@ -499,7 +528,7 @@ const NDA_Live_Generation = () => {
               onChange={(e) => handleAnswerChange(index, e.target.value, question)}
               required={isRequired}
             />
-          ) : currentType === "Number" ? (
+          ) : effectiveType === "Number" ? (
             <input
               type="number"
               className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
@@ -507,7 +536,7 @@ const NDA_Live_Generation = () => {
               onChange={(e) => handleAnswerChange(index, e.target.value, question)}
               required={isRequired}
             />
-          ) : currentType === "Email" ? (
+          ) : effectiveType === "Email" ? (
             <input
               type="email"
               className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
@@ -515,7 +544,7 @@ const NDA_Live_Generation = () => {
               onChange={(e) => handleAnswerChange(index, e.target.value, question)}
               required={isRequired}
             />
-          ) : currentType === "Paragraph" ? (
+          ) : effectiveType === "Paragraph" ? (
             <textarea
               className={`mt-2 w-full px-3 py-2 border rounded ${isDarkMode ? "bg-gray-700 text-blue-100 border-gray-600" : "bg-white text-blue-900 border-blue-200"}`}
               rows={4}
@@ -650,9 +679,15 @@ const NDA_Live_Generation = () => {
   useEffect(() => {
     if (localStorage.getItem("ndaProductTourCompleted")) return;
     const selectedPart = parseInt(localStorage.getItem("selectedPart") || "0", 10);
+    let tour: any = null;
+    const handleCancel = () => {
+      localStorage.setItem("ndaProductTourCompleted", "true");
+      if (tour) tour.complete();
+      // setShowRestartTour(true); // This line is removed
+    };
     if (selectedPart === 1) {
       setTimeout(() => {
-        const tour = new Shepherd.Tour({
+        tour = new Shepherd.Tour({
           defaultStepOptions: {
             cancelIcon: { enabled: true },
             classes: "shadow-md bg-purple-dark",
@@ -660,6 +695,7 @@ const NDA_Live_Generation = () => {
           },
           useModalOverlay: true,
         });
+        tour.on("cancel", handleCancel);
         tour.addStep({
           id: "welcome-nda-live-gen-1",
           text: `
@@ -686,13 +722,11 @@ const NDA_Live_Generation = () => {
         });
         tour.start();
       }, 500);
-      return () => {
-        Shepherd.activeTour && Shepherd.activeTour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
     if (selectedPart === 2) {
       setTimeout(() => {
-        const tour = new Shepherd.Tour({
+        tour = new Shepherd.Tour({
           defaultStepOptions: {
             cancelIcon: { enabled: true },
             classes: "shadow-md bg-purple-dark",
@@ -700,6 +734,7 @@ const NDA_Live_Generation = () => {
           },
           useModalOverlay: true,
         });
+        tour.on("cancel", handleCancel);
         tour.addStep({
           id: "welcome-nda-live-gen-2",
           text: `
@@ -726,13 +761,11 @@ const NDA_Live_Generation = () => {
         });
         tour.start();
       }, 500);
-      return () => {
-        Shepherd.activeTour && Shepherd.activeTour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
     if (selectedPart === 3) {
       setTimeout(() => {
-        const tour = new Shepherd.Tour({
+        tour = new Shepherd.Tour({
           defaultStepOptions: {
             cancelIcon: { enabled: true },
             classes: "shadow-md bg-purple-dark",
@@ -740,6 +773,7 @@ const NDA_Live_Generation = () => {
           },
           useModalOverlay: true,
         });
+        tour.on("cancel", handleCancel);
         tour.addStep({
           id: "welcome-nda-live-gen-3",
           text: `
@@ -766,9 +800,7 @@ const NDA_Live_Generation = () => {
         });
         tour.start();
       }, 500);
-      return () => {
-        Shepherd.activeTour && Shepherd.activeTour.complete();
-      };
+      return () => { tour && tour.complete(); };
     }
   }, []);
 
