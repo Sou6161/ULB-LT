@@ -7,7 +7,7 @@ import { useQuestionType } from "../context/QuestionTypeContext";
 import NDAAgreement, { documentText } from "../utils/NDA_Agreement";
 import { determineNDAQuestionType } from "../utils/NDA_questionTypeUtils";
 import { ThemeContext } from "../context/ThemeContext";
-import AIAnalysisPanel from "../components/AIAnalysisPanel";
+import AIAnalysisPanel_NDA from "../components/AIAnalysisPanel_NDA";
 import { useLocation, useNavigate } from "react-router";
 import { CrispChat } from "../bot/knowledge";
 import { useScore } from "../context/ScoreContext";
@@ -51,6 +51,9 @@ const NDA_LevelTwoPart_Two = () => {
   const [foundBigConditions, setFoundBigConditions] = useState<string[]>([]);
   const isInitialMount = useRef(true);
   const [showRestartTour, setShowRestartTour] = useState(false);
+  const [showAnalyzeSelection, setShowAnalyzeSelection] = useState(false);
+  const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
+  const [analyzedSelections, setAnalyzedSelections] = useState<string[]>([]);
 
   const processDocumentTextForPart1 = (html: string): string => {
     let updatedHtml = html;
@@ -671,6 +674,63 @@ const NDA_LevelTwoPart_Two = () => {
     isProcessingRef.current = false;
   };
 
+  // Listen for text selection in the document area
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        setShowAnalyzeSelection(false);
+        setSelectionCoords(null);
+        return;
+      }
+      const selectedText = selection.toString().trim();
+      if (selectedText.length > 0 && documentRef.current && selection.anchorNode) {
+        // Check if selection is inside the document area
+        let node = selection.anchorNode;
+        let found = false;
+        while (node) {
+          if (node instanceof HTMLElement && node === documentRef.current) {
+            found = true;
+            break;
+          }
+          node = node.parentElement || (node as any).parentNode;
+        }
+        if (found) {
+          // Get the bounding rect for the selection
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          setSelectionCoords({ x: rect.right, y: rect.top });
+          setShowAnalyzeSelection(true);
+          return;
+        }
+      }
+      setShowAnalyzeSelection(false);
+      setSelectionCoords(null);
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, []);
+
+  // Handler for Analyze Selection button
+  const handleAnalyzeSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const selectedText = selection.toString().trim();
+    if (selectedText.length > 0) {
+      setAnalyzedSelections([selectedText]);
+    }
+    setShowAnalyzeSelection(false);
+    setSelectionCoords(null);
+    selection?.removeAllRanges();
+  };
+
+  // Handler to clear analyzed selection (optional, for UI)
+  const handleClearAnalyzedSelection = () => {
+    setAnalyzedSelections([]);
+  };
+
   return (
     <>
       {showRestartTour && (
@@ -903,9 +963,44 @@ const NDA_LevelTwoPart_Two = () => {
         >
           {documentContent}
         </div>
-        <AIAnalysisPanel
+        {showAnalyzeSelection && selectionCoords && (
+          <button
+            style={{
+              position: "fixed",
+              left: selectionCoords.x + 10,
+              top: selectionCoords.y,
+              zIndex: 1000,
+              background: "#059669",
+              color: "white",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              border: "none",
+              cursor: "pointer",
+            }}
+            onClick={handleAnalyzeSelection}
+          >
+            Analyze Selection
+          </button>
+        )}
+        {/* Show a section for analyzed selection if present */}
+        {analyzedSelections.length > 0 && (
+          <div className="mb-6 p-4 rounded-xl border border-emerald-400 bg-emerald-50 text-emerald-900 flex items-center justify-between">
+            <div>
+              <strong>Analyzing Selected Clause:</strong>
+              <div className="mt-2 text-sm whitespace-pre-line max-h-40 overflow-y-auto">{analyzedSelections[0]}</div>
+            </div>
+            <button
+              onClick={handleClearAnalyzedSelection}
+              className="ml-4 px-3 py-1 rounded bg-emerald-200 text-emerald-900 hover:bg-emerald-300"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+        <AIAnalysisPanel_NDA
           documentText={getDocumentText()}
-          highlightedTexts={highlightedTexts}
+          highlightedTexts={analyzedSelections.length > 0 ? analyzedSelections : highlightedTexts}
           isDarkMode={isDarkMode}
         />
         <CrispChat websiteId={""} />
@@ -930,6 +1025,3 @@ const NDA_LevelTwoPart_Two = () => {
 };
 
 export default NDA_LevelTwoPart_Two;
-
-
-// latest code

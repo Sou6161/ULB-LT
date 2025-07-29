@@ -38,10 +38,10 @@ export const ndaTextTypes: { [key: string]: string } = {
   "Name of Witness (Company)": "What's the name of the witness for the company recipient?",
   "Address of Witness (Company)": "What's the address of the witness for the company recipient?",
   "Address of Individual (Recipient)": "What's the address of the individual recipient?",
-  "Number on Register of Companies (Recipient)": "What's the company registration number for the recipient?",
+  // REMOVED: "Number on Register of Companies (Recipient)": "What's the company registration number for the recipient?",
   "England (Recipient)": "What's the jurisdiction of registration for the recipient?",
   "Address of Individual (Discloser)": "What's the address of the individual discloser?",
-  "Number on Register of Companies (Discloser)": "What's the company registration number for the discloser?",
+  // REMOVED: "Number on Register of Companies (Discloser)": "What's the company registration number for the discloser?",
   "England (Discloser)": "What's the jurisdiction of registration for the discloser?"
 };
 
@@ -57,7 +57,10 @@ export const ndaNumberTypes: { [key: string]: string } = {
   "Number of Employees": "How many employees will have access to the information?",
   "Number of Advisers": "How many professional advisers will be involved?",
   "Number of Projects": "How many projects are covered by this agreement?",
-  "Number of Territories": "How many territories are covered by this agreement?"
+  "Number of Territories": "How many territories are covered by this agreement?",
+  // ADDED:
+  "Number on Register of Companies (Recipient)": "What's the company registration number for the recipient?",
+  "Number on Register of Companies (Discloser)": "What's the company registration number for the discloser?"
 };
 
 export const ndaDateTypes: { [key: string]: string } = {
