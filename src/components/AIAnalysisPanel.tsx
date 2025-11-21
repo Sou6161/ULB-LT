@@ -43,9 +43,8 @@ const AIAnalysisPanel: React.FC<AIAnalysisPanelProps> = ({
   const analyzeWithVertexAI = async () => {
     setIsLoading(true);
     try {
-      // Use the provided API key for Vertex AI
-      const vertexApiKey = "AIzaSyDWDCGtTYZc1atR91aUJq5OMFYrFyzIEpE";
-      const genAI = new GoogleGenerativeAI(vertexApiKey);
+      // Use the same API key from environment variable
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
       // Use a model that supports supervised fine-tuning according to Google Cloud docs
       const model = genAI.getGenerativeModel({
